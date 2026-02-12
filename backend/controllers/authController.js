@@ -1,6 +1,7 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const db = require('../config/database');
+const userModel = require('../models/userModel');
+const jwtConfig = require('../config/jwt');
 
 // Generate JWT Token
 const generateToken = (user) => {
@@ -11,36 +12,32 @@ const generateToken = (user) => {
       username: user.username,
       role: user.role
     },
-    process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRE }
+    jwtConfig.secret,
+    { expiresIn: jwtConfig.expiresIn }
   );
 };
 
 // @desc    Register new user
 // @route   POST /api/auth/register
 // @access  Public
-exports.register = async (req, res) => {
+const register = async (req, res) => {
   try {
     const { username, email, password, phone, role } = req.body;
 
-    // Validation
-    if (!username || !email || !password) {
+    // Check if user already exists
+    const existingUserByEmail = await userModel.getUserByEmail(email);
+    if (existingUserByEmail) {
       return res.status(400).json({
         success: false,
-        error: 'Please provide username, email, and password'
+        message: 'Email already registered.'
       });
     }
 
-    // Check if user already exists
-    const [existingUsers] = await db.query(
-      'SELECT * FROM users WHERE email = ? OR username = ?',
-      [email, username]
-    );
-
-    if (existingUsers.length > 0) {
+    const existingUserByUsername = await userModel.getUserByUsername(username);
+    if (existingUserByUsername) {
       return res.status(400).json({
         success: false,
-        error: 'User with this email or username already exists'
+        message: 'Username already taken.'
       });
     }
 
@@ -48,34 +45,38 @@ exports.register = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const password_hash = await bcrypt.hash(password, salt);
 
-    // Insert user into database
-    const [result] = await db.query(
-      `INSERT INTO users (username, email, password_hash, phone, role) 
-       VALUES (?, ?, ?, ?, ?)`,
-      [username, email, password_hash, phone || null, role || 'passenger']
-    );
-
-    // Get created user
-    const [newUser] = await db.query(
-      'SELECT user_id, username, email, phone, role, created_at FROM users WHERE user_id = ?',
-      [result.insertId]
-    );
+    // Create user
+    const newUser = await userModel.createUser({
+      username,
+      email,
+      password_hash,
+      phone,
+      role: role || 'passenger'
+    });
 
     // Generate token
-    const token = generateToken(newUser[0]);
+    const token = generateToken(newUser);
 
     res.status(201).json({
       success: true,
-      message: 'User registered successfully',
-      token,
-      user: newUser[0]
+      message: 'User registered successfully.',
+      data: {
+        user: {
+          user_id: newUser.user_id,
+          username: newUser.username,
+          email: newUser.email,
+          phone: newUser.phone,
+          role: newUser.role
+        },
+        token
+      }
     });
   } catch (error) {
     console.error('Registration error:', error);
     res.status(500).json({
       success: false,
-      error: 'Registration failed',
-      details: error.message
+      message: 'Error registering user.',
+      error: error.message
     });
   }
 };
@@ -83,48 +84,25 @@ exports.register = async (req, res) => {
 // @desc    Login user
 // @route   POST /api/auth/login
 // @access  Public
-exports.login = async (req, res) => {
+const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Validation
-    if (!email || !password) {
-      return res.status(400).json({
+    // Check if user exists
+    const user = await userModel.getUserByEmail(email);
+    if (!user) {
+      return res.status(401).json({
         success: false,
-        error: 'Please provide email and password'
+        message: 'Invalid email or password.'
       });
     }
 
-    // Find user by email
-    const [users] = await db.query(
-      'SELECT * FROM users WHERE email = ?',
-      [email]
-    );
-
-    if (users.length === 0) {
+    // Check password
+    const isPasswordValid = await bcrypt.compare(password, user.password_hash);
+    if (!isPasswordValid) {
       return res.status(401).json({
         success: false,
-        error: 'Invalid credentials'
-      });
-    }
-
-    const user = users[0];
-
-    // Check if user is active
-    if (!user.is_active) {
-      return res.status(401).json({
-        success: false,
-        error: 'Account is deactivated. Please contact support.'
-      });
-    }
-
-    // Compare password
-    const isMatch = await bcrypt.compare(password, user.password_hash);
-
-    if (!isMatch) {
-      return res.status(401).json({
-        success: false,
-        error: 'Invalid credentials'
+        message: 'Invalid email or password.'
       });
     }
 
@@ -133,115 +111,120 @@ exports.login = async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Login successful',
-      token,
-      user: {
-        user_id: user.user_id,
-        username: user.username,
-        email: user.email,
-        phone: user.phone,
-        role: user.role,
-        created_at: user.created_at
+      message: 'Login successful.',
+      data: {
+        user: {
+          user_id: user.user_id,
+          username: user.username,
+          email: user.email,
+          phone: user.phone,
+          role: user.role
+        },
+        token
       }
     });
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({
       success: false,
-      error: 'Login failed',
-      details: error.message
+      message: 'Error logging in.',
+      error: error.message
     });
   }
 };
 
-// @desc    Get current logged in user
-// @route   GET /api/auth/me
+// @desc    Get current user profile
+// @route   GET /api/auth/profile
 // @access  Private
-exports.getMe = async (req, res) => {
+const getProfile = async (req, res) => {
   try {
-    const [users] = await db.query(
-      'SELECT user_id, username, email, phone, role, is_active, created_at FROM users WHERE user_id = ?',
-      [req.user.user_id]
-    );
-
-    if (users.length === 0) {
+    const user = await userModel.getUserById(req.user.user_id);
+    
+    if (!user) {
       return res.status(404).json({
         success: false,
-        error: 'User not found'
+        message: 'User not found.'
       });
     }
 
     res.json({
       success: true,
-      user: users[0]
+      data: { user }
     });
   } catch (error) {
-    console.error('Get user error:', error);
+    console.error('Get profile error:', error);
     res.status(500).json({
       success: false,
-      error: 'Failed to get user information'
+      message: 'Error fetching profile.',
+      error: error.message
     });
   }
 };
 
-// @desc    Update user password
-// @route   PUT /api/auth/updatepassword
+// @desc    Update user profile
+// @route   PUT /api/auth/profile
 // @access  Private
-exports.updatePassword = async (req, res) => {
+const updateProfile = async (req, res) => {
   try {
-    const { currentPassword, newPassword } = req.body;
+    const { username, email, phone, currentPassword, newPassword } = req.body;
+    const userId = req.user.user_id;
 
-    if (!currentPassword || !newPassword) {
-      return res.status(400).json({
-        success: false,
-        error: 'Please provide current and new password'
-      });
+    // If changing password, verify current password
+    if (newPassword) {
+      if (!currentPassword) {
+        return res.status(400).json({
+          success: false,
+          message: 'Current password is required to set new password.'
+        });
+      }
+
+      const user = await userModel.getUserById(userId);
+      const isPasswordValid = await bcrypt.compare(currentPassword, user.password_hash);
+      
+      if (!isPasswordValid) {
+        return res.status(401).json({
+          success: false,
+          message: 'Current password is incorrect.'
+        });
+      }
+
+      // Hash new password
+      const salt = await bcrypt.genSalt(10);
+      const password_hash = await bcrypt.hash(newPassword, salt);
+      
+      await userModel.updateUser(userId, { password_hash });
     }
 
-    // Get user with password
-    const [users] = await db.query(
-      'SELECT * FROM users WHERE user_id = ?',
-      [req.user.user_id]
-    );
+    // Update other fields
+    const updateData = {};
+    if (username) updateData.username = username;
+    if (email) updateData.email = email;
+    if (phone) updateData.phone = phone;
 
-    if (users.length === 0) {
-      return res.status(404).json({
-        success: false,
-        error: 'User not found'
-      });
+    if (Object.keys(updateData).length > 0) {
+      await userModel.updateUser(userId, updateData);
     }
 
-    const user = users[0];
-
-    // Verify current password
-    const isMatch = await bcrypt.compare(currentPassword, user.password_hash);
-
-    if (!isMatch) {
-      return res.status(401).json({
-        success: false,
-        error: 'Current password is incorrect'
-      });
-    }
-
-    // Hash new password
-    const salt = await bcrypt.genSalt(10);
-    const newPasswordHash = await bcrypt.hash(newPassword, salt);
-
-    // Update password
-    await db.query(
-      'UPDATE users SET password_hash = ? WHERE user_id = ?',
-      [newPasswordHash, req.user.user_id]
-    );
+    const updatedUser = await userModel.getUserById(userId);
 
     res.json({
       success: true,
-      message: 'Password updated successfully'
+      message: 'Profile updated successfully.',
+      data: { user: updatedUser }
     });
   } catch (error) {
-    console.error('Update password error:', error);
+    console.error('Update profile error:', error);
     res.status(500).json({
       success: false,
-      error: 'Failed to update password'
+      message: 'Error updating profile.',
+      error: error.message
     });
   }
+};
+
+module.exports = {
+  register,
+  login,
+  getProfile,
+  updateProfile
 };

@@ -1,56 +1,38 @@
 const jwt = require('jsonwebtoken');
+const jwtConfig = require('../config/jwt');
 
-// Protect routes - verify JWT token
-exports.protect = async (req, res, next) => {
-  let token;
+// Verify JWT Token
+const verifyToken = (req, res, next) => {
+  try {
+    // Get token from header
+    const token = req.headers.authorization?.split(' ')[1]; // Bearer <token>
 
-  // Check if token exists in Authorization header
-  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
-    try {
-      // Get token from header
-      token = req.headers.authorization.split(' ')[1];
-
-      // Verify token
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-      // Attach user info to request
-      req.user = decoded;
-
-      next();
-    } catch (error) {
-      console.error('Token verification failed:', error.message);
+    if (!token) {
       return res.status(401).json({
         success: false,
-        error: 'Not authorized, token failed'
+        message: 'Access denied. No token provided.'
       });
     }
-  }
 
-  if (!token) {
+    // Verify token
+    const decoded = jwt.verify(token, jwtConfig.secret);
+    
+    // Add user info to request
+    req.user = decoded;
+    next();
+  } catch (error) {
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({
+        success: false,
+        message: 'Token has expired. Please login again.'
+      });
+    }
+    
     return res.status(401).json({
       success: false,
-      error: 'Not authorized, no token provided'
+      message: 'Invalid token.'
     });
   }
 };
 
-// Authorize specific roles
-exports.authorize = (...roles) => {
-  return (req, res, next) => {
-    if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        error: 'Not authenticated'
-      });
-    }
-
-    if (!roles.includes(req.user.role)) {
-      return res.status(403).json({
-        success: false,
-        error: `User role '${req.user.role}' is not authorized to access this route`
-      });
-    }
-
-    next();
-  };
-};
+module.exports = { verifyToken };

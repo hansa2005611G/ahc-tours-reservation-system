@@ -1,12 +1,17 @@
 const express = require('express');
 const router = express.Router();
+const paymentController = require('../controllers/paymentController');
+const { verifyToken } = require('../middleware/authMiddleware');
+const { isAdmin } = require('../middleware/roleMiddleware');
 
-// Placeholder
-router.get('/', (req, res) => {
-  res.json({ 
-    success: true,
-    message: 'Payment routes - coming soon' 
-  });
-});
+// Public route (PayHere callback)
+router.post('/notify', paymentController.handlePaymentNotification);
+
+// Protected routes
+router.post('/initiate', verifyToken, paymentController.initiatePayment);
+
+// Admin only
+router.post('/verify/:bookingId', verifyToken, isAdmin, paymentController.verifyPaymentManually);
+router.get('/', verifyToken, isAdmin, paymentController.getAllPayments);
 
 module.exports = router;
