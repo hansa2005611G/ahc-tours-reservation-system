@@ -1,0 +1,372 @@
+.search-results-page {
+  min-height: 100vh;
+  background: #f5f7fa;
+}
+
+.container {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  gap: 1rem;
+}
+
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Search Summary */
+.search-summary {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.search-summary h2 {
+  color: #333;
+  margin-bottom: 1rem;
+}
+
+.search-info {
+  display: flex;
+  gap: 2rem;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.search-route {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #667eea;
+}
+
+.search-date {
+  color: #666;
+  font-size: 1rem;
+}
+
+.results-count {
+  color: #888;
+  font-size: 0.9rem;
+  margin-top: 0.5rem;
+}
+
+/* Error Message */
+.error-message {
+  background: #fee;
+  color: #c33;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  border: 1px solid #fcc;
+}
+
+/* No Results */
+.no-results {
+  text-align: center;
+  padding: 4rem 2rem;
+  background: white;
+  border-radius: 12px;
+}
+
+.no-results-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+  opacity: 0.5;
+}
+
+.no-results h3 {
+  color: #333;
+  margin-bottom: 0.5rem;
+}
+
+.no-results p {
+  color: #666;
+  margin-bottom: 2rem;
+}
+
+.back-btn {
+  padding: 0.8rem 2rem;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.back-btn:hover {
+  background: #5568d3;
+}
+
+/* Bus Cards */
+.results-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.bus-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s, box-shadow 0.3s;
+  overflow: hidden;
+}
+
+.bus-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
+}
+
+.bus-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+  border-bottom: 1px solid #eee;
+}
+
+.bus-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.bus-name {
+  color: #333;
+  font-size: 1.3rem;
+  margin: 0;
+}
+
+.bus-number {
+  color: #666;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.bus-type {
+  display: inline-block;
+  padding: 0.3rem 0.8rem;
+  border-radius: 15px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-top: 0.3rem;
+  width: fit-content;
+}
+
+.bus-type.ac {
+  background: #e3f2fd;
+  color: #1976d2;
+}
+
+.bus-type.nonac {
+  background: #fff3e0;
+  color: #f57c00;
+}
+
+.bus-type.semiluxury {
+  background: #f3e5f5;
+  color: #7b1fa2;
+}
+
+.bus-type.luxury {
+  background: #fce4ec;
+  color: #c2185b;
+}
+
+.bus-price {
+  text-align: right;
+}
+
+.price-label {
+  display: block;
+  color: #888;
+  font-size: 0.85rem;
+  margin-bottom: 0.3rem;
+}
+
+.price-amount {
+  display: block;
+  color: #667eea;
+  font-size: 1.8rem;
+  font-weight: 700;
+}
+
+.bus-card-body {
+  padding: 1.5rem;
+}
+
+.journey-info {
+  margin-bottom: 1rem;
+}
+
+.journey-time {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.time-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.time {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #333;
+}
+
+.location {
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.journey-line {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.duration {
+  background: #f5f5f5;
+  padding: 0.3rem 0.8rem;
+  border-radius: 15px;
+  font-size: 0.85rem;
+  color: #666;
+  font-weight: 600;
+}
+
+.line {
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(to right, #667eea, #764ba2);
+  position: relative;
+}
+
+.line::before,
+.line::after {
+  content: '';
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: #667eea;
+  border-radius: 50%;
+  top: -3px;
+}
+
+.line::before {
+  left: 0;
+}
+
+.line::after {
+  right: 0;
+}
+
+.seats-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.8rem;
+  background: #f9f9f9;
+  border-radius: 8px;
+}
+
+.seats-badge {
+  padding: 0.4rem 0.8rem;
+  background: #4caf50;
+  color: white;
+  border-radius: 15px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.seats-badge.low {
+  background: #ff9800;
+}
+
+.total-seats {
+  color: #888;
+  font-size: 0.85rem;
+}
+
+.bus-card-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #eee;
+}
+
+.select-btn {
+  width: 100%;
+  padding: 0.9rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.select-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+}
+
+.select-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .container {
+    padding: 1rem;
+  }
+
+  .bus-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .journey-time {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .journey-line {
+    width: 100%;
+  }
+
+  .search-info {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+}

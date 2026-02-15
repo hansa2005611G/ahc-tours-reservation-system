@@ -214,9 +214,10 @@ const handlePaymentNotification = async (req, res) => {
   }
 };
 
+
 // @desc    Verify payment manually (for testing)
 // @route   POST /api/payments/verify/:bookingId
-// @access  Private/Admin
+// @access  Public (for testing only)
 const verifyPaymentManually = async (req, res) => {
   try {
     const { bookingId } = req.params;
@@ -227,6 +228,14 @@ const verifyPaymentManually = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: 'Booking not found.'
+      });
+    }
+
+    // Check if already paid
+    if (booking.payment_status === 'completed') {
+      return res.status(400).json({
+        success: false,
+        message: 'Booking is already paid.'
       });
     }
 
@@ -259,7 +268,7 @@ const verifyPaymentManually = async (req, res) => {
       qr_code: qrCode.qr_code_base64
     });
 
-    // Send confirmation email
+    // Send confirmation email (optional - won't fail if email not configured)
     try {
       await emailService.sendBookingConfirmation({
         passenger_email: booking.passenger_email,
@@ -274,8 +283,10 @@ const verifyPaymentManually = async (req, res) => {
         total_amount: booking.total_amount,
         qr_code_base64: qrCode.qr_code_base64
       });
+      console.log('✅ Confirmation email sent');
     } catch (emailError) {
-      console.error('Email error:', emailError);
+      console.log('⚠️ Email not sent (not configured):', emailError.message);
+      // Don't fail the request if email fails
     }
 
     // Get updated booking
@@ -298,6 +309,91 @@ const verifyPaymentManually = async (req, res) => {
     });
   }
 };
+
+// @desc    Verify payment manually (for testing)
+// @route   POST /api/payments/verify/:bookingId
+// @access  Private/Admin
+// const verifyPaymentManually = async (req, res) => {
+//   try {
+//     const { bookingId } = req.params;
+
+//     // Get booking
+//     const booking = await bookingModel.getBookingById(bookingId);
+//     if (!booking) {
+//       return res.status(404).json({
+//         success: false,
+//         message: 'Booking not found.'
+//       });
+//     }
+
+//     // Create mock payment record
+//     const payment = await paymentModel.createPayment({
+//       booking_id: booking.booking_id,
+//       amount: booking.total_amount,
+//       payment_method: 'Manual',
+//       transaction_id: `MANUAL-${Date.now()}`,
+//       status: 'completed'
+//     });
+
+//     // Update booking status
+//     await bookingModel.updateBooking(booking.booking_id, {
+//       payment_status: 'completed'
+//     });
+
+//     // Generate QR Code
+//     const qrCode = await qrService.generateQRCode({
+//       booking_reference: booking.booking_reference,
+//       passenger_name: booking.passenger_name,
+//       seat_number: booking.seat_number,
+//       journey_date: booking.journey_date,
+//       origin: booking.origin,
+//       destination: booking.destination
+//     });
+
+//     // Update booking with QR code
+//     await bookingModel.updateBooking(booking.booking_id, {
+//       qr_code: qrCode.qr_code_base64
+//     });
+
+//     // Send confirmation email
+//     try {
+//       await emailService.sendBookingConfirmation({
+//         passenger_email: booking.passenger_email,
+//         passenger_name: booking.passenger_name,
+//         booking_reference: booking.booking_reference,
+//         journey_date: booking.journey_date,
+//         departure_time: booking.departure_time,
+//         origin: booking.origin,
+//         destination: booking.destination,
+//         seat_number: booking.seat_number,
+//         bus_number: booking.bus_number,
+//         total_amount: booking.total_amount,
+//         qr_code_base64: qrCode.qr_code_base64
+//       });
+//     } catch (emailError) {
+//       console.error('Email error:', emailError);
+//     }
+
+//     // Get updated booking
+//     const updatedBooking = await bookingModel.getBookingById(bookingId);
+
+//     res.json({
+//       success: true,
+//       message: 'Payment verified and ticket generated successfully.',
+//       data: {
+//         booking: updatedBooking,
+//         qr_code: qrCode.qr_code_base64
+//       }
+//     });
+//   } catch (error) {
+//     console.error('Manual payment verification error:', error);
+//     res.status(500).json({
+//       success: false,
+//       message: 'Error verifying payment.',
+//       error: error.message
+//     });
+//   }
+// };
 
 // @desc    Get all payments
 // @route   GET /api/payments
