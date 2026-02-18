@@ -26,35 +26,42 @@ const Booking = () => {
     });
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setLoading(true);
+  setError('');
 
-    try {
-      // Create bookings for all selected seats
-      const bookingPromises = selectedSeats.map(seatNumber => {
-        return bookingAPI.create({
-          schedule_id: schedule.schedule_id,
-          seat_number: seatNumber,
-          passenger_name: formData.passenger_name,
-          passenger_email: formData.passenger_email,
-          passenger_phone: formData.passenger_phone
-        });
+  try {
+    // Create bookings for all selected seats
+    const bookingPromises = selectedSeats.map(seatNumber => {
+      return bookingAPI.create({
+        schedule_id: schedule.schedule_id,
+        seat_number: seatNumber,
+        passenger_name: formData.passenger_name,
+        passenger_email: formData.passenger_email,
+        passenger_phone: formData.passenger_phone
       });
+    });
 
-      const responses = await Promise.all(bookingPromises);
-      const bookings = responses.map(res => res.data.data.booking);
+    const responses = await Promise.all(bookingPromises);
+    const bookings = responses.map(res => res.data.data.booking);
 
-      // Navigate to payment with all bookings
-      navigate('/payment', { state: { bookings, schedule, selectedSeats } });
-    } catch (error) {
-      console.error('Booking error:', error);
-      setError(error.response?.data?.message || 'Booking failed. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
+    // Navigate directly to success page (skip payment)
+    navigate('/booking-success', { 
+      state: { 
+        bookings, 
+        schedule, 
+        selectedSeats,
+        paymentMethod: 'pay_on_bus' 
+      } 
+    });
+  } catch (error) {
+    console.error('Booking error:', error);
+    setError(error.response?.data?.message || 'Booking failed. Please try again.');
+  } finally {
+    setLoading(false);
+  }
+};
 
   const formatTime = (time) => {
     return new Date(`2000-01-01T${time}`).toLocaleTimeString('en-US', {

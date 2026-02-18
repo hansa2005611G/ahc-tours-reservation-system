@@ -1,65 +1,85 @@
 const db = require('../config/database');
 
-// Generate unique booking reference
-const generateBookingReference = () => {
-  const timestamp = Date.now().toString(36).toUpperCase();
-  const random = Math.random().toString(36).substring(2, 7).toUpperCase();
-  return `AHC-${timestamp}-${random}`;
+// Create a new booking
+const createBooking = async (bookingData) => {
+  const {
+    user_id,
+    schedule_id,
+    seat_number,
+    passenger_name,
+    passenger_email,
+    passenger_phone,
+    total_amount,
+    payment_status,
+    booking_reference,
+    verification_status
+  } = bookingData;
+
+  try {
+    const [result] = await db.query(
+      `INSERT INTO bookings 
+       (user_id, schedule_id, seat_number, passenger_name, passenger_email, passenger_phone, 
+        total_amount, payment_status, booking_reference, verification_status, booking_date) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+      [user_id, schedule_id, seat_number, passenger_name, passenger_email, passenger_phone,
+       total_amount, payment_status, booking_reference, verification_status]
+    );
+
+    return {
+      booking_id: result.insertId,
+      user_id,
+      schedule_id,
+      seat_number,
+      passenger_name,
+      passenger_email,
+      passenger_phone,
+      total_amount,
+      payment_status,
+      booking_reference,
+      verification_status
+    };
+  } catch (error) {
+    throw error;
+  }
 };
 
-// Get all bookings
+// Get all bookings with filters
 const getAllBookings = async (filters = {}) => {
   try {
     let query = `
       SELECT 
         b.*,
-        s.departure_time, s.arrival_time, s.journey_date,
+        s.journey_date, s.departure_time, s.arrival_time,
+        r.origin, r.destination, r.route_name,
         bus.bus_number, bus.bus_name, bus.bus_type,
-        r.route_name, r.origin, r.destination,
-        u.username, u.email as user_email, u.phone as user_phone
+        u.username, u.email as user_email
       FROM bookings b
       JOIN schedules s ON b.schedule_id = s.schedule_id
-      JOIN buses bus ON s.bus_id = bus.bus_id
       JOIN routes r ON s.route_id = r.route_id
-      JOIN users u ON b.user_id = u.user_id
+      JOIN buses bus ON s.bus_id = bus.bus_id
+      LEFT JOIN users u ON b.user_id = u.user_id
       WHERE 1=1
     `;
     const params = [];
 
-    // Filter by user
     if (filters.user_id) {
       query += ' AND b.user_id = ?';
       params.push(filters.user_id);
     }
 
-    // Filter by schedule
-    if (filters.schedule_id) {
-      query += ' AND b.schedule_id = ?';
-      params.push(filters.schedule_id);
-    }
-
-    // Filter by payment status
     if (filters.payment_status) {
       query += ' AND b.payment_status = ?';
       params.push(filters.payment_status);
     }
 
-    // Filter by verification status
     if (filters.verification_status) {
       query += ' AND b.verification_status = ?';
       params.push(filters.verification_status);
     }
 
-    // Filter by booking reference
-    if (filters.booking_reference) {
-      query += ' AND b.booking_reference = ?';
-      params.push(filters.booking_reference);
-    }
-
-    // Filter by journey date
-    if (filters.journey_date) {
-      query += ' AND b.journey_date = ?';
-      params.push(filters.journey_date);
+    if (filters.schedule_id) {
+      query += ' AND b.schedule_id = ?';
+      params.push(filters.schedule_id);
     }
 
     query += ' ORDER BY b.booking_date DESC';
@@ -74,78 +94,39 @@ const getAllBookings = async (filters = {}) => {
 // Get booking by ID
 const getBookingById = async (bookingId) => {
   try {
-    const [rows] = await db.query(`
-      SELECT 
+    const [rows] = await db.query(
+      `SELECT 
         b.*,
-        s.departure_time, s.arrival_time, s.journey_date,
+        s.journey_date, s.departure_time, s.arrival_time,
+        r.origin, r.destination, r.route_name, r.base_fare,
         bus.bus_number, bus.bus_name, bus.bus_type,
-        r.route_name, r.origin, r.destination, r.base_fare,
-        u.username, u.email as user_email, u.phone as user_phone
+        u.username, u.email as user_email
       FROM bookings b
       JOIN schedules s ON b.schedule_id = s.schedule_id
-      JOIN buses bus ON s.bus_id = bus.bus_id
       JOIN routes r ON s.route_id = r.route_id
-      JOIN users u ON b.user_id = u.user_id
-      WHERE b.booking_id = ?
-    `, [bookingId]);
-    return rows[0];
-  } catch (error) {
-    throw error;
-  }
-};
-
-// Get booking by reference
-const getBookingByReference = async (bookingReference) => {
-  try {
-    const [rows] = await db.query(`
-      SELECT 
-        b.*,
-        s.departure_time, s.arrival_time, s.journey_date,
-        bus.bus_number, bus.bus_name, bus.bus_type,
-        r.route_name, r.origin, r.destination, r.base_fare,
-        u.username, u.email as user_email, u.phone as user_phone
-      FROM bookings b
-      JOIN schedules s ON b.schedule_id = s.schedule_id
       JOIN buses bus ON s.bus_id = bus.bus_id
-      JOIN routes r ON s.route_id = r.route_id
-      JOIN users u ON b.user_id = u.user_id
-      WHERE b.booking_reference = ?
-    `, [bookingReference]);
-    return rows[0];
-  } catch (error) {
-    throw error;
-  }
-};
-
-// Create new booking
-const createBooking = async (bookingData) => {
-  const {
-    user_id,
-    schedule_id,
-    seat_number,
-    passenger_name,
-    passenger_email,
-    passenger_phone,
-    journey_date,
-    total_amount
-  } = bookingData;
-
-  const booking_reference = generateBookingReference();
-  
-  try {
-    const [result] = await db.query(
-      `INSERT INTO bookings 
-      (booking_reference, user_id, schedule_id, seat_number, passenger_name, 
-       passenger_email, passenger_phone, journey_date, total_amount, payment_status, verification_status) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'pending')`,
-      [booking_reference, user_id, schedule_id, seat_number, passenger_name, 
-       passenger_email, passenger_phone, journey_date, total_amount]
+      LEFT JOIN users u ON b.user_id = u.user_id
+      WHERE b.booking_id = ?`,
+      [bookingId]
     );
-    
-    return {
-      booking_id: result.insertId,
-      booking_reference
-    };
+    return rows[0];
+  } catch (error) {
+    throw error;
+  }
+};
+
+// Get booking by seat (check if seat is already booked)
+const getBookingBySeat = async (schedule_id, seat_number) => {
+  try {
+    const [rows] = await db.query(
+      `SELECT * FROM bookings 
+       WHERE schedule_id = ? 
+       AND seat_number = ? 
+       AND payment_status NOT IN ('refunded', 'failed')
+       LIMIT 1`,
+      [schedule_id, seat_number]
+    );
+    return rows[0];
   } catch (error) {
     throw error;
   }
@@ -153,76 +134,46 @@ const createBooking = async (bookingData) => {
 
 // Update booking
 const updateBooking = async (bookingId, updateData) => {
+  const fields = [];
+  const values = [];
+
+  Object.keys(updateData).forEach(key => {
+    fields.push(`${key} = ?`);
+    values.push(updateData[key]);
+  });
+
+  values.push(bookingId);
+
   try {
-    const fields = [];
-    const values = [];
-
-    if (updateData.payment_status !== undefined) {
-      fields.push('payment_status = ?');
-      values.push(updateData.payment_status);
-    }
-    if (updateData.verification_status !== undefined) {
-      fields.push('verification_status = ?');
-      values.push(updateData.verification_status);
-    }
-    if (updateData.qr_code !== undefined) {
-      fields.push('qr_code = ?');
-      values.push(updateData.qr_code);
-    }
-
-    if (fields.length === 0) {
-      throw new Error('No fields to update');
-    }
-
-    values.push(bookingId);
-
     const [result] = await db.query(
       `UPDATE bookings SET ${fields.join(', ')} WHERE booking_id = ?`,
       values
     );
-
     return result.affectedRows > 0;
   } catch (error) {
     throw error;
   }
 };
 
-// Cancel booking (refund)
-const cancelBooking = async (bookingId) => {
+// Delete booking
+const deleteBooking = async (bookingId) => {
   try {
-    const [result] = await db.query(
-      'UPDATE bookings SET payment_status = "refunded" WHERE booking_id = ?',
-      [bookingId]
-    );
+    const [result] = await db.query('DELETE FROM bookings WHERE booking_id = ?', [bookingId]);
     return result.affectedRows > 0;
-  } catch (error) {
-    throw error;
-  }
-};
-
-// Check if seat is available
-const isSeatAvailable = async (scheduleId, seatNumber) => {
-  try {
-    const [rows] = await db.query(
-      `SELECT COUNT(*) as count FROM bookings 
-       WHERE schedule_id = ? AND seat_number = ? AND payment_status IN ('pending', 'completed')`,
-      [scheduleId, seatNumber]
-    );
-    return rows[0].count === 0;
   } catch (error) {
     throw error;
   }
 };
 
 // Get booking statistics
-const getBookingStatistics = async () => {
+const getBookingStats = async () => {
   try {
     const [stats] = await db.query(`
       SELECT 
         COUNT(*) as total_bookings,
-        SUM(CASE WHEN payment_status = 'completed' THEN 1 ELSE 0 END) as completed_bookings,
+        SUM(CASE WHEN payment_status = 'completed' THEN 1 ELSE 0 END) as paid_bookings,
         SUM(CASE WHEN payment_status = 'pending' THEN 1 ELSE 0 END) as pending_bookings,
-        SUM(CASE WHEN payment_status = 'failed' THEN 1 ELSE 0 END) as failed_bookings,
+        SUM(CASE WHEN payment_status = 'pay_on_bus' THEN 1 ELSE 0 END) as pay_on_bus_bookings,
         SUM(CASE WHEN payment_status = 'refunded' THEN 1 ELSE 0 END) as refunded_bookings,
         SUM(CASE WHEN payment_status = 'completed' THEN total_amount ELSE 0 END) as total_revenue
       FROM bookings
@@ -234,13 +185,11 @@ const getBookingStatistics = async () => {
 };
 
 module.exports = {
+  createBooking,
   getAllBookings,
   getBookingById,
-  getBookingByReference,
-  createBooking,
+  getBookingBySeat,
   updateBooking,
-  cancelBooking,
-  isSeatAvailable,
-  getBookingStatistics,
-  generateBookingReference
+  deleteBooking,
+  getBookingStats
 };

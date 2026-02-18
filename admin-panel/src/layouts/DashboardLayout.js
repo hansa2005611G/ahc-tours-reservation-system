@@ -26,6 +26,7 @@ import {
   ConfirmationNumber as BookingIcon,
   Payment as PaymentIcon,
   People as PeopleIcon,
+  CancelPresentation as CancellationIcon, 
   Logout as LogoutIcon,
   AccountCircle
 } from '@mui/icons-material';
@@ -40,7 +41,9 @@ const menuItems = [
   { text: 'Schedules', icon: <ScheduleIcon />, path: '/schedules' },
   { text: 'Bookings', icon: <BookingIcon />, path: '/bookings' },
   { text: 'Payments', icon: <PaymentIcon />, path: '/payments' },
-  { text: 'Users', icon: <PeopleIcon />, path: '/users' }
+  { text: 'Users', icon: <PeopleIcon />, path: '/users' },
+  { text: 'Cancellations', icon: <CancellationIcon />, path: '/cancellations' }
+  
 ];
 
 const DashboardLayout = () => {

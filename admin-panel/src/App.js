@@ -14,6 +14,7 @@ import Bookings from './pages/Bookings';
 import Payments from './pages/Payments';
 import Users from './pages/Users';
 import DashboardLayout from './layouts/DashboardLayout';
+import Cancellations from './pages/Cancellations';
 
 // Custom Theme
 const theme = createTheme({
@@ -123,6 +124,8 @@ function App() {
               
               {/* Payment Management */}
               <Route path="payments" element={<Payments />} />
+
+              <Route path="cancellations" element={<Cancellations />} />
               
               {/* User Management */}
               <Route path="users" element={<Users />} />

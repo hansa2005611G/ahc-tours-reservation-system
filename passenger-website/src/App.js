@@ -11,6 +11,9 @@ import SeatSelection from './pages/SeatSelection';
 import Booking from './pages/Booking';
 import Payment from './pages/Payment';
 import PaymentSuccess from './pages/PaymentSuccess';
+import MyBookings from './pages/MyBookings';
+import Profile from './pages/Profile';
+import BookingSuccess from './pages/BookingSuccess';
 
 function App() {
   return (
@@ -25,6 +28,9 @@ function App() {
           <Route path="/booking" element={<Booking />} />
           <Route path="/payment" element={<Payment />} />
           <Route path="/payment-success" element={<PaymentSuccess />} />
+          <Route path="/my-bookings" element={<MyBookings />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/booking-success" element={<BookingSuccess />} />
         </Routes>
       </Router>
     </AuthProvider>

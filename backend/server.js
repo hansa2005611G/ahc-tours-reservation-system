@@ -50,6 +50,7 @@ app.use('/api/schedules', require('./routes/scheduleRoutes'));
 app.use('/api/bookings', require('./routes/bookingRoutes')); 
 app.use('/api/payments', require('./routes/paymentRoutes'));
 app.use('/api/qr', require('./routes/qrRoutes'));  
+app.use('/api/cancellations', require('./routes/cancellationRoutes'));
 
 // 404 handler
 app.use((req, res) => {

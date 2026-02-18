@@ -1,6 +1,7 @@
 const bookingModel = require('../models/bookingModel');
 const scheduleModel = require('../models/scheduleModel');
-
+const qrService = require('../services/qrService'); 
+const emailService = require('../services/emailService'); 
 // @desc    Get all bookings
 // @route   GET /api/bookings
 // @access  Private
@@ -103,7 +104,7 @@ const getBookingByReference = async (req, res) => {
   }
 };
 
-// @desc    Create new booking
+/// @desc    Create a new booking
 // @route   POST /api/bookings
 // @access  Private
 const createBooking = async (req, res) => {
@@ -116,15 +117,17 @@ const createBooking = async (req, res) => {
       passenger_phone
     } = req.body;
 
+    const user_id = req.user.user_id;
+
     // Validation
     if (!schedule_id || !seat_number || !passenger_name || !passenger_email || !passenger_phone) {
       return res.status(400).json({
         success: false,
-        message: 'All fields are required: schedule_id, seat_number, passenger details.'
+        message: 'All fields are required.'
       });
     }
 
-    // Check if schedule exists
+    // Get schedule details
     const schedule = await scheduleModel.getScheduleById(schedule_id);
     if (!schedule) {
       return res.status(404).json({
@@ -133,61 +136,90 @@ const createBooking = async (req, res) => {
       });
     }
 
-    // Check if schedule is active
-    if (schedule.status !== 'scheduled') {
+    // Check if seat is already booked
+    const existingBooking = await bookingModel.getBookingBySeat(schedule_id, seat_number);
+    if (existingBooking) {
       return res.status(400).json({
         success: false,
-        message: 'This schedule is not available for booking.'
+        message: 'This seat is already booked.'
       });
     }
 
-    // Check if seat number is valid
-    if (seat_number < 1 || seat_number > schedule.total_seats) {
+    // Check if seats are available
+    if (schedule.available_seats <= 0) {
       return res.status(400).json({
         success: false,
-        message: `Invalid seat number. Must be between 1 and ${schedule.total_seats}.`
+        message: 'No seats available for this schedule.'
       });
     }
 
-    // Check if seat is available
-    const seatAvailable = await bookingModel.isSeatAvailable(schedule_id, seat_number);
-    if (!seatAvailable) {
-      return res.status(400).json({
-        success: false,
-        message: 'Seat is already booked. Please select another seat.'
-      });
-    }
+    // Generate unique booking reference
+    const booking_reference = `AHC-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
 
-    // Check if there are available seats
-    if (schedule.available_seats < 1) {
-      return res.status(400).json({
-        success: false,
-        message: 'No seats available on this schedule.'
-      });
-    }
-
-    // Create booking
-    const newBooking = await bookingModel.createBooking({
-      user_id: req.user.user_id,
+    // Create booking with "Pay on Bus" status
+    const booking = await bookingModel.createBooking({
+      user_id,
       schedule_id,
       seat_number,
       passenger_name,
       passenger_email,
       passenger_phone,
-      journey_date: schedule.journey_date,
-      total_amount: schedule.base_fare
+      total_amount: schedule.base_fare,
+      payment_status: 'pay_on_bus', // ← Changed from 'pending'
+      booking_reference,
+      verification_status: 'pending'
     });
 
-    // Reduce available seats
+    // Generate QR Code immediately
+    const qrCode = await qrService.generateQRCode({
+      booking_reference: booking_reference,
+      passenger_name: passenger_name,
+      seat_number: seat_number,
+      journey_date: schedule.journey_date,
+      origin: schedule.origin,
+      destination: schedule.destination
+    });
+
+    // Update booking with QR code
+    await bookingModel.updateBooking(booking.booking_id, {
+      qr_code: qrCode.qr_code_base64
+    });
+
+    // Decrease available seats
     await scheduleModel.updateAvailableSeats(schedule_id, 1);
 
-    // Get created booking with full details
-    const booking = await bookingModel.getBookingById(newBooking.booking_id);
+    // Get complete booking details
+    const completeBooking = await bookingModel.getBookingById(booking.booking_id);
+
+    // Send booking confirmation email
+    try {
+      await emailService.sendBookingConfirmation({
+        passenger_email: completeBooking.passenger_email,
+        passenger_name: completeBooking.passenger_name,
+        booking_reference: completeBooking.booking_reference,
+        journey_date: completeBooking.journey_date,
+        departure_time: completeBooking.departure_time,
+        arrival_time: completeBooking.arrival_time,
+        origin: completeBooking.origin,
+        destination: completeBooking.destination,
+        seat_number: completeBooking.seat_number,
+        bus_number: completeBooking.bus_number,
+        bus_type: completeBooking.bus_type,
+        total_amount: completeBooking.total_amount,
+        qr_code_base64: qrCode.qr_code_base64
+      });
+      console.log('✅ Booking confirmation email sent');
+    } catch (emailError) {
+      console.log('⚠️ Email not sent:', emailError.message);
+    }
 
     res.status(201).json({
       success: true,
-      message: 'Booking created successfully. Please proceed to payment.',
-      data: { booking }
+      message: 'Booking created successfully. Pay on the bus.',
+      data: { 
+        booking: completeBooking,
+        qr_code: qrCode.qr_code_base64
+      }
     });
   } catch (error) {
     console.error('Create booking error:', error);

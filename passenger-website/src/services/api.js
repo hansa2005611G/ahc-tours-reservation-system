@@ -67,6 +67,16 @@ export const bookingAPI = {
   cancel: (id) => api.put(`/bookings/${id}/cancel`)
 };
 
+// Cancellation APIs
+export const cancellationAPI = {
+  request: (data) => api.post('/cancellations', data),
+  getMyRequests: () => api.get('/cancellations/my-requests'),
+  getAll: (params) => api.get('/cancellations', { params }),
+  getById: (id) => api.get(`/cancellations/${id}`),
+  process: (id, data) => api.put(`/cancellations/${id}`, data),
+  getStats: () => api.get('/cancellations/stats/overview')
+};
+
 // Payment APIs
 export const paymentAPI = {
   initiate: (bookingId) => api.post('/payments/initiate', { booking_id: bookingId })

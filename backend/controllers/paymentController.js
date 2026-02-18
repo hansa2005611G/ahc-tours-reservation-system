@@ -268,29 +268,31 @@ const verifyPaymentManually = async (req, res) => {
       qr_code: qrCode.qr_code_base64
     });
 
-    // Send confirmation email (optional - won't fail if email not configured)
+    // Get updated booking with all details (including departure_time, arrival_time, bus_type)
+    const updatedBooking = await bookingModel.getBookingById(bookingId);
+
+    // Send booking confirmation email
     try {
       await emailService.sendBookingConfirmation({
-        passenger_email: booking.passenger_email,
-        passenger_name: booking.passenger_name,
-        booking_reference: booking.booking_reference,
-        journey_date: booking.journey_date,
-        departure_time: booking.departure_time,
-        origin: booking.origin,
-        destination: booking.destination,
-        seat_number: booking.seat_number,
-        bus_number: booking.bus_number,
-        total_amount: booking.total_amount,
+        passenger_email: updatedBooking.passenger_email,
+        passenger_name: updatedBooking.passenger_name,
+        booking_reference: updatedBooking.booking_reference,
+        journey_date: updatedBooking.journey_date,
+        departure_time: updatedBooking.departure_time,
+        arrival_time: updatedBooking.arrival_time,
+        origin: updatedBooking.origin,
+        destination: updatedBooking.destination,
+        seat_number: updatedBooking.seat_number,
+        bus_number: updatedBooking.bus_number,
+        bus_type: updatedBooking.bus_type,
+        total_amount: updatedBooking.total_amount,
         qr_code_base64: qrCode.qr_code_base64
       });
-      console.log('✅ Confirmation email sent');
+      console.log('✅ Booking confirmation email sent to:', updatedBooking.passenger_email);
     } catch (emailError) {
-      console.log('⚠️ Email not sent (not configured):', emailError.message);
+      console.log('⚠️ Email not sent:', emailError.message);
       // Don't fail the request if email fails
     }
-
-    // Get updated booking
-    const updatedBooking = await bookingModel.getBookingById(bookingId);
 
     res.json({
       success: true,

@@ -23,10 +23,13 @@ const Navbar = () => {
           {isAuthenticated ? (
             <>
               <Link to="/my-bookings" className="nav-link">
-                My Bookings
+                🎫 My Bookings
+              </Link>
+              <Link to="/profile" className="nav-link">
+                👤 Profile
               </Link>
               <div className="user-menu">
-                <span className="user-name">👤 {user?.username}</span>
+                <span className="user-name">{user?.username}</span>
                 <button onClick={handleLogout} className="logout-btn">
                   Logout
                 </button>

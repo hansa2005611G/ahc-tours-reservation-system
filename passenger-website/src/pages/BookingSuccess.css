@@ -1,0 +1,81 @@
+.booking-success-page {
+  min-height: 100vh;
+  background: #f5f7fa;
+}
+
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+/* Success Header */
+.success-header {
+  text-align: center;
+  padding: 3rem 1rem;
+  background: white;
+  border-radius: 12px;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.success-icon {
+  width: 80px;
+  height: 80px;
+  background: linear-gradient(135deg, #4caf50 0%, #66bb6a 100%);
+  color: white;
+  font-size: 3rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1.5rem;
+  animation: scaleIn 0.5s ease-out;
+}
+
+@keyframes scaleIn {
+  0% { transform: scale(0); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+.success-header h1 {
+  color: #333;
+  margin-bottom: 0.5rem;
+  font-size: 2rem;
+}
+
+.success-header > p {
+  color: #666;
+  font-size: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.pay-on-bus-notice {
+  background: linear-gradient(135deg, #ff9800 0%, #fb8c00 100%);
+  color: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  margin-top: 1.5rem;
+}
+
+.pay-on-bus-notice h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1.3rem;
+}
+
+.pay-on-bus-notice p {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.pay-on-bus-badge {
+  background: #ff9800;
+  color: white;
+  padding: 0.3rem 0.8rem;
+  border-radius: 15px;
+  font-size: 0.9rem;
+}
+
+/* Copy all other styles from PaymentSuccess.css */
+/* ... (ticket-card, action-buttons, etc.) ... */

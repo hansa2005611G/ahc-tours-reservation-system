@@ -46,6 +46,14 @@ export const authAPI = {
   updateProfile: (data) => api.put('/auth/profile', data)
 };
 
+// Cancellation APIs
+export const cancellationAPI = {
+  getAll: (params) => api.get('/cancellations', { params }),
+  getById: (id) => api.get(`/cancellations/${id}`),
+  process: (id, data) => api.put(`/cancellations/${id}`, data),
+  getStats: () => api.get('/cancellations/stats/overview')
+};
+
 // Bus APIs
 export const busAPI = {
   getAll: (params) => api.get('/buses', { params }),
