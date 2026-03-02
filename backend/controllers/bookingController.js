@@ -302,7 +302,7 @@ const cancelBooking = async (req, res) => {
 // @access  Private/Admin
 const getBookingStatistics = async (req, res) => {
   try {
-    const stats = await bookingModel.getBookingStatistics();
+    const stats = await bookingModel.getBookingStats();
 
     res.json({
       success: true,

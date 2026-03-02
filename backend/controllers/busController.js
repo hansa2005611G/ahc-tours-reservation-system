@@ -252,9 +252,9 @@ const deleteBus = async (req, res) => {
 // @desc    Get bus statistics
 // @route   GET /api/buses/stats
 // @access  Private/Admin
-const getBusStatistics = async (req, res) => {
+const getBusStats = async (req, res) => {
   try {
-    const stats = await busModel.getBusStatistics();
+    const stats = await busModel.getBusStats();
 
     res.json({
       success: true,
@@ -270,11 +270,109 @@ const getBusStatistics = async (req, res) => {
   }
 };
 
+// @desc    Update bus status
+// @route   PUT /api/buses/:id/status
+// @access  Private/Admin
+const updateBusStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, reason } = req.body;
+    const userId = req.user.user_id;
+
+    // Validation
+    if (!status || !['active', 'inactive', 'maintenance'].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Valid status is required (active, inactive, or maintenance).'
+      });
+    }
+
+    if ((status === 'inactive' || status === 'maintenance') && !reason) {
+      return res.status(400).json({
+        success: false,
+        message: 'Reason is required when setting bus to inactive or maintenance.'
+      });
+    }
+
+    await busModel.updateBusStatus(id, { status, reason }, userId);
+
+    res.json({
+      success: true,
+      message: `Bus status updated to ${status} successfully.`
+    });
+  } catch (error) {
+    console.error('Update bus status error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating bus status.',
+      error: error.message
+    });
+  }
+};
+
+// @desc    Get bus status history
+// @route   GET /api/buses/:id/status-history
+// @access  Private/Admin
+const getBusStatusHistory = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const history = await busModel.getBusStatusHistory(id);
+
+    res.json({
+      success: true,
+      count: history.length,
+      data: { history }
+    });
+  } catch (error) {
+    console.error('Get bus status history error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching bus status history.',
+      error: error.message
+    });
+  }
+};
+
+// @desc    Search buses by status
+// @route   GET /api/buses/search
+// @access  Private/Admin
+const searchBuses = async (req, res) => {
+  try {
+    const { q, status } = req.query;
+
+    if (!q) {
+      return res.status(400).json({
+        success: false,
+        message: 'Search query is required.'
+      });
+    }
+
+    const buses = await busModel.searchBusesByStatus(q, status);
+
+    res.json({
+      success: true,
+      count: buses.length,
+      data: { buses }
+    });
+  } catch (error) {
+    console.error('Search buses error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error searching buses.',
+      error: error.message
+    });
+  }
+};
+
+// ✅ SINGLE module.exports with ALL functions
 module.exports = {
   getAllBuses,
   getBusById,
   createBus,
   updateBus,
   deleteBus,
-  getBusStatistics
+  getBusStats,
+  updateBusStatus,
+  getBusStatusHistory,
+  searchBuses
 };

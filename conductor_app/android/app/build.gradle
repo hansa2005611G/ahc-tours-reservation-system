@@ -1,0 +1,86 @@
+plugins {
+    id "com.android.application"
+    id "kotlin-android"
+    pluginManagement {
+        def flutterSdkPath = {
+            def properties = new Properties()
+            file("local.properties").withInputStream { properties.load(it) }
+            def flutterSdkPath = properties.getProperty("flutter.sdk")
+            assert flutterSdkPath != null, "flutter.sdk not set in local.properties"
+            return flutterSdkPath
+        }()
+    
+        includeBuild("$flutterSdkPath/packages/flutter_tools/gradle")
+    
+        repositories {
+            google()
+            mavenCentral()
+            gradlePluginPortal()
+        }
+        
+        plugins {
+            id "com.android.application" version "8.2.2" apply false
+            id "org.jetbrains.kotlin.android" version "1.9.0" apply false
+        }
+    }
+}
+
+
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file('local.properties')
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.withReader('UTF-8') { reader ->
+        localProperties.load(reader)
+    }
+}
+
+def flutterVersionCode = localProperties.getProperty('flutter.versionCode')
+if (flutterVersionCode == null) {
+    flutterVersionCode = '1'
+}
+
+def flutterVersionName = localProperties.getProperty('flutter.versionName')
+if (flutterVersionName == null) {
+    flutterVersionName = '1.0'
+}
+
+android {
+    namespace "com.ahctours.conductor_app"
+    compileSdk 34
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+
+    sourceSets {
+        main.java.srcDirs += 'src/main/kotlin'
+    }
+
+    defaultConfig {
+        applicationId "com.ahctours.conductor_app"
+        minSdkVersion 21
+        targetSdkVersion 34
+        versionCode flutterVersionCode.toInteger()
+        versionName flutterVersionName
+        multiDexEnabled true
+    }
+
+    buildTypes {
+        release {
+            signingConfig signingConfigs.debug
+        }
+    }
+}
+
+flutter {
+    source '../..'
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.22"
+}

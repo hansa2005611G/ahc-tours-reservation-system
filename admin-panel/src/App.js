@@ -15,6 +15,8 @@ import Payments from './pages/Payments';
 import Users from './pages/Users';
 import DashboardLayout from './layouts/DashboardLayout';
 import Cancellations from './pages/Cancellations';
+import ScheduleTemplates from './pages/ScheduleTemplates';
+import BusStatusManagement from './pages/BusStatusManagement';
 
 // Custom Theme
 const theme = createTheme({
@@ -116,6 +118,10 @@ function App() {
               {/* Route Management */}
               <Route path="routes" element={<RouteManagement />} />
               
+              {/* Schedule Templates */}
+              <Route path="schedule-templates" element={<ScheduleTemplates />} />
+              {/* Bus Status Management */}
+              <Route path="bus-status" element={<BusStatusManagement />} />
               {/* Schedule Management */}
               <Route path="schedules" element={<Schedules />} />
               

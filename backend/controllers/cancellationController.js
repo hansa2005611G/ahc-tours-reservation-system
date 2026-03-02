@@ -41,7 +41,7 @@ const requestCancellation = async (req, res) => {
 
     // Check if user owns the booking
     if (booking.user_id !== user_id) {
-      console.log('❌ User does not own booking');
+      console.log('❌ User does not own booking. Booking user_id:', booking.user_id, 'Request user_id:', user_id);
       return res.status(403).json({
         success: false,
         message: 'You can only cancel your own bookings.'
@@ -57,12 +57,12 @@ const requestCancellation = async (req, res) => {
       });
     }
 
-    // Check if payment is completed
-    if (booking.payment_status !== 'completed') {
-      console.log('❌ Payment not completed');
+    // Allow cancellation for both 'completed' and 'pay_on_bus' bookings
+    if (booking.payment_status !== 'completed' && booking.payment_status !== 'pay_on_bus') {
+      console.log('❌ Payment status not valid:', booking.payment_status);
       return res.status(400).json({
         success: false,
-        message: 'Only paid bookings can be cancelled.'
+        message: 'Only confirmed bookings can be cancelled.'
       });
     }
 
@@ -244,11 +244,11 @@ const processCancellationRequest = async (req, res) => {
 
       // Refund policy
       if (hoursDifference >= 24) {
-        refund_amount = request.total_amount;
+        refund_amount = parseFloat(request.total_amount);
       } else if (hoursDifference >= 12) {
-        refund_amount = request.total_amount * 0.75;
+        refund_amount = parseFloat(request.total_amount) * 0.75;
       } else if (hoursDifference >= 5) {
-        refund_amount = request.total_amount * 0.5;
+        refund_amount = parseFloat(request.total_amount) * 0.5;
       } else {
         refund_amount = 0;
       }
@@ -266,7 +266,7 @@ const processCancellationRequest = async (req, res) => {
     // Update cancellation request
     await cancellationModel.updateCancellationRequest(id, {
       status,
-      admin_remarks,
+      admin_remarks: admin_remarks || (status === 'approved' ? 'Approved' : 'Rejected'),
       processed_by: admin_id,
       refund_amount
     });
@@ -278,7 +278,7 @@ const processCancellationRequest = async (req, res) => {
         passenger_name: request.passenger_name,
         booking_reference: request.booking_reference,
         status,
-        admin_remarks,
+        admin_remarks: admin_remarks || (status === 'approved' ? 'Approved' : 'Rejected'),
         refund_amount
       });
       console.log('✅ Cancellation notification sent to passenger');

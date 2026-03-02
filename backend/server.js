@@ -2,6 +2,8 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const config = require('./config/config');
+const { startScheduleAutoGeneration, runInitialGeneration } = require('./utils/scheduleCron');
+
 
 // Load environment variables
 dotenv.config();
@@ -47,10 +49,14 @@ app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/buses', require('./routes/busRoutes')); 
 app.use('/api/routes', require('./routes/routeRoutes'));
 app.use('/api/schedules', require('./routes/scheduleRoutes'));
+app.use('/api/schedule-templates', require('./routes/scheduleTemplateRoutes'));
 app.use('/api/bookings', require('./routes/bookingRoutes')); 
 app.use('/api/payments', require('./routes/paymentRoutes'));
 app.use('/api/qr', require('./routes/qrRoutes'));  
 app.use('/api/cancellations', require('./routes/cancellationRoutes'));
+
+
+
 
 // 404 handler
 app.use((req, res) => {
@@ -59,6 +65,8 @@ app.use((req, res) => {
     message: 'Route not found'
   });
 });
+
+
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -69,6 +77,8 @@ app.use((err, req, res, next) => {
     error: config.NODE_ENV === 'development' ? err.stack : {}
   });
 });
+
+
 
 // Start server
 const PORT = config.PORT;
@@ -82,5 +92,10 @@ app.listen(PORT, () => {
   console.log('='.repeat(50));
   console.log('');
 });
+   
+
+// Start schedule auto-generation cron job
+startScheduleAutoGeneration();
+
 
 module.exports = app;

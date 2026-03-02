@@ -10,7 +10,7 @@ const api = axios.create({
   }
 });
 
-// Add token to requests
+// Add auth token to requests
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('passengerToken');
@@ -24,32 +24,11 @@ api.interceptors.request.use(
   }
 );
 
-// Handle response errors
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('passengerToken');
-      localStorage.removeItem('passengerUser');
-      window.location.href = '/login';
-    }
-    return Promise.reject(error);
-  }
-);
-
 // Auth APIs
 export const authAPI = {
-  login: (credentials) => api.post('/auth/login', credentials),
-  register: (userData) => api.post('/auth/register', userData),
-  getProfile: () => api.get('/auth/profile'),
+  login: (data) => api.post('/auth/login', data),
+  register: (data) => api.post('/auth/register', data),
   updateProfile: (data) => api.put('/auth/profile', data)
-};
-
-// Route APIs
-export const routeAPI = {
-  getAll: (params) => api.get('/routes', { params }),
-  getById: (id) => api.get(`/routes/${id}`),
-  getPopular: (limit) => api.get(`/routes/popular/list?limit=${limit}`)
 };
 
 // Schedule APIs
@@ -60,26 +39,22 @@ export const scheduleAPI = {
 
 // Booking APIs
 export const bookingAPI = {
-  getAll: (params) => api.get('/bookings', { params }),
-  getById: (id) => api.get(`/bookings/${id}`),
-  getByReference: (ref) => api.get(`/bookings/reference/${ref}`),
   create: (data) => api.post('/bookings', data),
+  getAll: () => api.get('/bookings'),
+  getById: (id) => api.get(`/bookings/${id}`),
   cancel: (id) => api.put(`/bookings/${id}/cancel`)
+};
+
+// Payment APIs
+export const paymentAPI = {
+  initiate: (bookingId) => api.post('/payments/initiate', { booking_id: bookingId }),
+  verifyManually: (bookingId) => api.post(`/payments/verify/${bookingId}`)
 };
 
 // Cancellation APIs
 export const cancellationAPI = {
   request: (data) => api.post('/cancellations', data),
-  getMyRequests: () => api.get('/cancellations/my-requests'),
-  getAll: (params) => api.get('/cancellations', { params }),
-  getById: (id) => api.get(`/cancellations/${id}`),
-  process: (id, data) => api.put(`/cancellations/${id}`, data),
-  getStats: () => api.get('/cancellations/stats/overview')
-};
-
-// Payment APIs
-export const paymentAPI = {
-  initiate: (bookingId) => api.post('/payments/initiate', { booking_id: bookingId })
+  getMyRequests: () => api.get('/cancellations/my-requests')
 };
 
 export default api;

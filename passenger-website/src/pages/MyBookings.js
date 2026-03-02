@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { bookingAPI, cancellationAPI } from '../services/api';
 import Navbar from '../components/Navbar';
+import { bookingAPI, cancellationAPI } from '../services/api';
 import './MyBookings.css';
 
 const MyBookings = () => {
@@ -11,7 +11,7 @@ const MyBookings = () => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [filter, setFilter] = useState('all'); // all, upcoming, past
+  const [filter, setFilter] = useState('all');
   const [cancellingId, setCancellingId] = useState(null);
 
   const fetchBookings = useCallback(async () => {
@@ -36,54 +36,53 @@ const MyBookings = () => {
   }, [isAuthenticated, navigate, fetchBookings]);
 
   const handleCancelBooking = async (booking) => {
-  // Check time restriction
-  const journeyDateTime = new Date(`${booking.journey_date}T${booking.departure_time}`);
-  const now = new Date();
-  const hoursDifference = (journeyDateTime - now) / (1000 * 60 * 60);
+    // Check time restriction
+    const journeyDateTime = new Date(`${booking.journey_date}T${booking.departure_time}`);
+    const now = new Date();
+    const hoursDifference = (journeyDateTime - now) / (1000 * 60 * 60);
 
-  if (hoursDifference < 5) {
-    alert('Cannot cancel booking. Cancellation must be requested at least 5 hours before departure.');
-    return;
-  }
+    if (hoursDifference < 5) {
+      alert('Cannot cancel booking. Cancellation must be requested at least 5 hours before departure.');
+      return;
+    }
 
-  const reason = prompt('Please provide a reason for cancellation:');
-  if (!reason || reason.trim() === '') {
-    alert('Cancellation reason is required.');
-    return;
-  }
+    const reason = prompt('Please provide a reason for cancellation:');
+    if (!reason || reason.trim() === '') {
+      alert('Cancellation reason is required.');
+      return;
+    }
 
-  if (!window.confirm('Are you sure you want to submit a cancellation request?')) {
-    return;
-  }
+    if (!window.confirm('Are you sure you want to submit a cancellation request?')) {
+      return;
+    }
 
-  try {
-    setCancellingId(booking.booking_id);
-    
-    const response = await cancellationAPI.request({
-      booking_id: booking.booking_id,
-      reason: reason.trim()
-    });
+    try {
+      setCancellingId(booking.booking_id);
+      
+      const response = await cancellationAPI.request({
+        booking_id: booking.booking_id,
+        reason: reason.trim()
+      });
 
-    console.log('Cancellation response:', response.data);
-    
-    alert('Cancellation request submitted successfully! You will be notified once the admin reviews your request.');
-    
-    // Refresh bookings list
-    await fetchBookings();
-  } catch (error) {
-    console.error('Cancel booking error:', error);
-    const errorMessage = error.response?.data?.message || 'Failed to submit cancellation request';
-    alert(errorMessage);
-  } finally {
-    setCancellingId(null);
-  }
-};
+      console.log('Cancellation response:', response.data);
+      
+      alert('Cancellation request submitted successfully! You will be notified once the admin reviews your request.');
+      
+      // Refresh bookings list
+      await fetchBookings();
+    } catch (error) {
+      console.error('Cancel booking error:', error);
+      const errorMessage = error.response?.data?.message || 'Failed to submit cancellation request';
+      alert(errorMessage);
+    } finally {
+      setCancellingId(null);
+    }
+  };
 
   const handleViewTicket = (booking) => {
-    navigate('/payment-success', { 
+    navigate('/booking-success', { 
       state: { 
-        bookings: [booking],
-        orderId: booking.booking_reference 
+        bookings: [booking]
       } 
     });
   };
@@ -105,41 +104,42 @@ const MyBookings = () => {
       journeyDate.setHours(0, 0, 0, 0);
 
       if (filter === 'upcoming') {
-        return journeyDate >= today && booking.payment_status === 'completed';
+        return journeyDate >= today && (booking.payment_status === 'completed' || booking.payment_status === 'pay_on_bus');
       } else if (filter === 'past') {
         return journeyDate < today || booking.verification_status === 'used';
       }
-      return true; // all
+      return true;
     });
   };
 
   const getStatusBadge = (booking) => {
-  if (booking.payment_status === 'refunded') {
-    return <span className="status-badge cancelled">Cancelled</span>;
-  }
-  if (booking.payment_status === 'pay_on_bus') {
-    return <span className="status-badge pay-on-bus">Pay on Bus</span>;
-  }
-  if (booking.payment_status === 'pending') {
-    return <span className="status-badge pending">Payment Pending</span>;
-  }
-  if (booking.payment_status === 'completed') {
-    return <span className="status-badge completed">Paid</span>;
-  }
-  if (booking.verification_status === 'used') {
-    return <span className="status-badge completed">Completed</span>;
-  }
+    if (booking.payment_status === 'refunded') {
+      return <span className="status-badge cancelled">Cancelled</span>;
+    }
+    if (booking.payment_status === 'pay_on_bus') {
+      return <span className="status-badge pay-on-bus">Pay on Bus</span>;
+    }
+    if (booking.payment_status === 'pending') {
+      return <span className="status-badge pending">Payment Pending</span>;
+    }
+    if (booking.payment_status === 'completed') {
+      return <span className="status-badge completed">Paid</span>;
+    }
+    if (booking.verification_status === 'used') {
+      return <span className="status-badge completed">Completed</span>;
+    }
 
-  const journeyDate = new Date(booking.journey_date);
-  const today = new Date();
-  journeyDate.setHours(0, 0, 0, 0);
-  today.setHours(0, 0, 0, 0);
+    const journeyDate = new Date(booking.journey_date);
+    const today = new Date();
+    journeyDate.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0);
 
-  if (journeyDate >= today) {
-    return <span className="status-badge confirmed">Confirmed</span>;
-  }
-  return <span className="status-badge expired">Expired</span>;
-};
+    if (journeyDate >= today) {
+      return <span className="status-badge confirmed">Confirmed</span>;
+    }
+    return <span className="status-badge expired">Expired</span>;
+  };
+
   const canCancelBooking = (booking) => {
     const journeyDate = new Date(booking.journey_date);
     const today = new Date();
@@ -147,7 +147,7 @@ const MyBookings = () => {
     today.setHours(0, 0, 0, 0);
 
     return (
-      booking.payment_status === 'completed' &&
+      (booking.payment_status === 'completed' || booking.payment_status === 'pay_on_bus') &&
       booking.verification_status !== 'used' &&
       journeyDate >= today
     );
@@ -283,7 +283,7 @@ const MyBookings = () => {
                 </div>
 
                 <div className="booking-actions">
-                  {booking.payment_status === 'completed' && (
+                  {(booking.payment_status === 'completed' || booking.payment_status === 'pay_on_bus') && (
                     <button
                       onClick={() => handleViewTicket(booking)}
                       className="action-btn view-btn"
@@ -294,20 +294,11 @@ const MyBookings = () => {
 
                   {canCancelBooking(booking) && (
                     <button
-                      onClick={() => handleCancelBooking(booking.booking_id)}
+                      onClick={() => handleCancelBooking(booking)}
                       className="action-btn cancel-btn"
                       disabled={cancellingId === booking.booking_id}
                     >
-                      {cancellingId === booking.booking_id ? 'Cancelling...' : '❌ Cancel Booking'}
-                    </button>
-                  )}
-
-                  {booking.payment_status === 'pending' && (
-                    <button
-                      onClick={() => navigate('/payment', { state: { bookings: [booking] } })}
-                      className="action-btn pay-btn"
-                    >
-                      💳 Complete Payment
+                      {cancellingId === booking.booking_id ? 'Submitting...' : '❌ Cancel Booking'}
                     </button>
                   )}
                 </div>
