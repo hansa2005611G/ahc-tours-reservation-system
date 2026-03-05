@@ -54,7 +54,7 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // Register
+  // Register - NEW METHOD
   Future<bool> register({
     required String username,
     required String email,
@@ -67,14 +67,6 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      print('═══════════════════════════════════════');
-      print('📱 AUTH PROVIDER - REGISTER ATTEMPT');
-      print('═══════════════════════════════════════');
-      print('Username: $username');
-      print('Email: $email');
-      print('Full Name: $fullName');
-      print('Phone: $phone');
-      
       final response = await _apiService.register(
         username: username,
         email: email,
@@ -82,34 +74,12 @@ class AuthProvider with ChangeNotifier {
         fullName: fullName,
         phone: phone,
       );
-      
-      print('Response received: $response');
-      print('═══════════════════════════════════════');
-
-      if (response['success'] == true) {
-        // Use User model instead of raw map
-        _user = User.fromJson(response['data']['user']);
-        _error = null;
-        
-        print('✅ Registration successful!');
-        print('User data: $_user');
-        
-        _isLoading = false;
-        notifyListeners();
-        return true;
-      } else {
-        _error = response['message'] ?? 'Registration failed';
-        print('❌ Registration failed: $_error');
-        
-        _isLoading = false;
-        notifyListeners();
-        return false;
-      }
+      _user = User.fromJson(response['data']['user']);
+      _isLoading = false;
+      notifyListeners();
+      return true;
     } catch (e) {
       _error = e.toString().replaceAll('Exception: ', '');
-      print('❌ Registration exception: $_error');
-      print('═══════════════════════════════════════');
-      
       _isLoading = false;
       notifyListeners();
       return false;
