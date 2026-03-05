@@ -55,8 +55,8 @@ app.use('/api/payments', require('./routes/paymentRoutes'));
 app.use('/api/qr', require('./routes/qrRoutes'));  
 app.use('/api/cancellations', require('./routes/cancellationRoutes'));
 
-
-
+// TEST ROUTES
+app.use('/api/test', require('./routes/testRoutes'));
 
 // 404 handler
 app.use((req, res) => {

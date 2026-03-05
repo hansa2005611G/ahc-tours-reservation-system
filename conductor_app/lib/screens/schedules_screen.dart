@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:conductor_app/providers/booking_provider.dart';
 import 'package:conductor_app/screens/schedule_details_screen.dart';
+// ignore: unused_import
 import 'package:intl/intl.dart';
 
 class SchedulesScreen extends StatefulWidget {

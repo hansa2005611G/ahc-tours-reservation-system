@@ -4,6 +4,7 @@ class User {
   final String email;
   final String role;
   final String? fullName;
+  final String? phone;
 
   User({
     required this.userId,
@@ -11,18 +12,22 @@ class User {
     required this.email,
     required this.role,
     this.fullName,
+    this.phone,
   });
 
+  // From JSON (backend response)
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
-      userId: json['user_id'],
-      username: json['username'],
-      email: json['email'],
-      role: json['role'],
-      fullName: json['full_name'],
+      userId: json['user_id'] ?? json['userId'] ?? 0,
+      username: json['username'] ?? '',
+      email: json['email'] ?? '',
+      role: json['role'] ?? '',
+      fullName: json['full_name'] ?? json['fullName'],
+      phone: json['phone'],
     );
   }
 
+  // To JSON (for storage)
   Map<String, dynamic> toJson() {
     return {
       'user_id': userId,
@@ -30,6 +35,12 @@ class User {
       'email': email,
       'role': role,
       'full_name': fullName,
+      'phone': phone,
     };
+  }
+
+  @override
+  String toString() {
+    return 'User(userId: $userId, username: $username, email: $email, role: $role)';
   }
 }

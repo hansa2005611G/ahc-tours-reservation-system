@@ -16,29 +16,137 @@ class ApiService {
   }
 
   // Login
-  Future<Map<String, dynamic>> login(String username, String password) async {
+Future<Map<String, dynamic>> login(String username, String password) async {
+  try {
+    // Determine if input is email or username
+    final isEmail = username.contains('@');
+    
+    final body = {
+      if (isEmail) 'email': username else 'username': username,
+      'password': password,
+    };
+
+    final url = '${AppConstants.baseUrl}${AppConstants.loginEndpoint}';
+    
+    print('═══════════════════════════════════════');
+    print('🔐 LOGIN REQUEST DEBUG');
+    print('═══════════════════════════════════════');
+    print('URL: $url');
+    print('Body: $body');
+    print('═══════════════════════════════════════');
+
+    final response = await http.post(
+      Uri.parse(url),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(body),
+    ).timeout(
+      const Duration(seconds: 10),
+      onTimeout: () {
+        throw Exception('Connection timeout - Backend not reachable');
+      },
+    );
+
+    print('Response Status: ${response.statusCode}');
+    print('Response Body: ${response.body}');
+    print('═══════════════════════════════════════');
+
+    final data = jsonDecode(response.body);
+
+    if (response.statusCode == 200 && data['success']) {
+      // Save token
+      await _storage.saveToken(data['data']['token']);
+      
+      // Save user data as JSON string
+      final userData = data['data']['user'];
+      await _storage.saveUser(jsonEncode(userData));
+      
+      print('✅ Login successful - Token and user saved');
+      return data;
+    } else {
+      throw Exception(data['message'] ?? 'Login failed');
+    }
+  } catch (e) {
+    print('❌ LOGIN ERROR: $e');
+    print('═══════════════════════════════════════');
+    rethrow;
+  }
+}
+
+// Register Conductor
+Future<Map<String, dynamic>> register({
+  required String username,
+  required String email,
+  required String password,
+  String? fullName,
+  String? phone,
+}) async {
+  try {
+    final body = {
+      'username': username,
+      'email': email,
+      'password': password,
+      'full_name': fullName,
+      'phone': phone,
+    };
+
+    final url = '${AppConstants.baseUrl}${AppConstants.registerEndpoint}';
+    
+    print('═══════════════════════════════════════');
+    print('📝 REGISTER REQUEST DEBUG');
+    print('═══════════════════════════════════════');
+    print('URL: $url');
+    print('Body: $body');
+    print('═══════════════════════════════════════');
+
+    final response = await http.post(
+      Uri.parse(url),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(body),
+    ).timeout(
+      const Duration(seconds: 10),
+      onTimeout: () {
+        throw Exception('Connection timeout - Backend not reachable');
+      },
+    );
+
+    print('Response Status: ${response.statusCode}');
+    print('Response Body: ${response.body}');
+    print('═══════════════════════════════════════');
+
+    final data = jsonDecode(response.body);
+
+    if (response.statusCode == 201 && data['success']) {
+      // Save token
+      await _storage.saveToken(data['data']['token']);
+      
+      // Save user data as JSON string
+      final userData = data['data']['user'];
+      await _storage.saveUser(jsonEncode(userData));
+      
+      print('✅ Registration successful - Token and user saved');
+      return data;
+    } else {
+      throw Exception(data['message'] ?? 'Registration failed');
+    }
+  } catch (e) {
+    print('❌ REGISTER ERROR: $e');
+    print('═══════════════════════════════════════');
+    rethrow;
+  }
+}
+
+  // Test connection
+  Future<bool> testConnection() async {
     try {
-      final response = await http.post(
-        Uri.parse('${AppConstants.baseUrl}${AppConstants.loginEndpoint}'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'username': username,
-          'password': password,
-        }),
-      );
+      final response = await http.get(
+        Uri.parse('${AppConstants.baseUrl.replaceAll('/api', '')}/'),
+      ).timeout(const Duration(seconds: 5));
 
-      final data = jsonDecode(response.body);
-
-      if (response.statusCode == 200 && data['success']) {
-        // Save token and user data
-        await _storage.saveToken(data['data']['token']);
-        await _storage.saveUser(jsonEncode(data['data']['user']));
-        return data;
-      } else {
-        throw Exception(data['message'] ?? 'Login failed');
-      }
+      print('Connection test: ${response.statusCode}');
+      return response.statusCode == 200;
     } catch (e) {
-      throw Exception('Login error: $e');
+      print('Connection test failed: $e');
+      return false;
     }
   }
 

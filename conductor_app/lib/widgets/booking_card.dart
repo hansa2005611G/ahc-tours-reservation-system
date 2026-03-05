@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:conductor_app/models/booking.dart';
+// ignore: unused_import
 import 'package:intl/intl.dart';
 
 class BookingCard extends StatelessWidget {

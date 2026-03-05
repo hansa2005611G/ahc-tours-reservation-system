@@ -3,7 +3,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
 import 'package:conductor_app/providers/booking_provider.dart';
 import 'package:conductor_app/screens/ticket_verification_screen.dart';
-import 'package:vibration/vibration.dart';
+// import 'package:vibration/vibration.dart'; // REMOVED
 
 class QRScannerScreen extends StatefulWidget {
   const QRScannerScreen({Key? key}) : super(key: key);
@@ -31,14 +31,6 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
       _isProcessing = true;
     });
 
-    // Vibrate on scan
-    try {
-      if (await Vibration.hasVibrator() ?? false) {
-        Vibration.vibrate(duration: 100);
-      }
-    } catch (e) {
-      // Vibration not supported
-    }
 
     final bookingProvider = Provider.of<BookingProvider>(context, listen: false);
     final success = await bookingProvider.verifyQR(qrData);
@@ -84,6 +76,8 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
                     return const Icon(Icons.flash_off);
                   case TorchState.on:
                     return const Icon(Icons.flash_on);
+                  default:
+                    return const Icon(Icons.flash_off);
                 }
               },
             ),
@@ -169,7 +163,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
   }
 }
 
-// Scanner overlay painter
+// Scanner overlay painter (keep as is)
 class ScannerOverlay extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
@@ -177,7 +171,6 @@ class ScannerOverlay extends CustomPainter {
     final double left = (size.width - scanAreaSize) / 2;
     final double top = (size.height - scanAreaSize) / 2;
 
-    // Dark overlay
     final backgroundPath = Path()
       ..addRect(Rect.fromLTWH(0, 0, size.width, size.height));
 
@@ -200,7 +193,6 @@ class ScannerOverlay extends CustomPainter {
       Paint()..color = Colors.black.withOpacity(0.6),
     );
 
-    // Corner brackets
     final paint = Paint()
       ..color = Colors.green
       ..strokeWidth = 4
@@ -208,19 +200,12 @@ class ScannerOverlay extends CustomPainter {
 
     const cornerLength = 30.0;
 
-    // Top-left
     canvas.drawLine(Offset(left, top), Offset(left + cornerLength, top), paint);
     canvas.drawLine(Offset(left, top), Offset(left, top + cornerLength), paint);
-
-    // Top-right
     canvas.drawLine(Offset(left + scanAreaSize, top), Offset(left + scanAreaSize - cornerLength, top), paint);
     canvas.drawLine(Offset(left + scanAreaSize, top), Offset(left + scanAreaSize, top + cornerLength), paint);
-
-    // Bottom-left
     canvas.drawLine(Offset(left, top + scanAreaSize), Offset(left + cornerLength, top + scanAreaSize), paint);
     canvas.drawLine(Offset(left, top + scanAreaSize), Offset(left, top + scanAreaSize - cornerLength), paint);
-
-    // Bottom-right
     canvas.drawLine(Offset(left + scanAreaSize, top + scanAreaSize), Offset(left + scanAreaSize - cornerLength, top + scanAreaSize), paint);
     canvas.drawLine(Offset(left + scanAreaSize, top + scanAreaSize), Offset(left + scanAreaSize, top + scanAreaSize - cornerLength), paint);
   }

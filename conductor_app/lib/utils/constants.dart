@@ -1,9 +1,10 @@
 class AppConstants {
   // API Configuration
-  static const String baseUrl = 'http://192.168.8.110:5001/api'; // Change to your IP
+  static const String baseUrl = 'http://192.168.8.110:5001/api';
   
   // API Endpoints
   static const String loginEndpoint = '/auth/login';
+  static const String registerEndpoint = '/auth/register-conductor';
   static const String verifyQREndpoint = '/qr/verify';
   static const String markUsedEndpoint = '/qr/mark-used';
   static const String todaySchedulesEndpoint = '/qr/today-schedules';

@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:conductor_app/providers/auth_provider.dart';
 import 'package:conductor_app/widgets/custom_button.dart';
 import 'package:conductor_app/screens/home_screen.dart';
+import 'package:conductor_app/services/api_service.dart';
+import 'package:conductor_app/screens/register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -45,9 +47,112 @@ class _LoginScreenState extends State<LoginScreen> {
         SnackBar(
           content: Text(authProvider.error ?? 'Login failed'),
           backgroundColor: Colors.red,
+          duration: const Duration(seconds: 4),
         ),
       );
     }
+  }
+
+  Future<void> _testConnection() async {
+    final apiService = ApiService();
+    
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        content: Row(
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(width: 20),
+            Text('Testing connection...'),
+          ],
+        ),
+      ),
+    );
+
+    // Test connection
+    final connected = await apiService.testConnection();
+    
+    if (!mounted) return;
+    Navigator.pop(context); // Close loading dialog
+
+    // Show result dialog
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(
+              connected ? Icons.check_circle : Icons.error,
+              color: connected ? Colors.green : Colors.red,
+              size: 32,
+            ),
+            const SizedBox(width: 12),
+            Text(connected ? 'Connected!' : 'Connection Failed'),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (connected) ...[
+                const Text(
+                  '✅ Backend is reachable!',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text('You can now login with your credentials.'),
+              ] else ...[
+                const Text(
+                  '❌ Cannot reach backend',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.red,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Please check:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                const Text('1. Backend server is running'),
+                const Text('2. Phone is on same WiFi as computer'),
+                const Text('3. Firewall allows port 5001'),
+                const Text('4. IP address in constants.dart is correct'),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Text(
+                    'Open Chrome on your phone and try:\n'
+                    'http://YOUR_COMPUTER_IP:5001\n\n'
+                    'It should show: "AHC Tours API is running"',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -71,6 +176,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 
                 const SizedBox(height: 24),
+
+              
+
                 
                 // Title
                 Text(
@@ -94,21 +202,22 @@ class _LoginScreenState extends State<LoginScreen> {
                 
                 const SizedBox(height: 60),
                 
-                // Username Field
+                // Username/Email Field
                 TextFormField(
                   controller: _usernameController,
                   decoration: InputDecoration(
-                    labelText: 'Username',
-                    hintText: 'Enter your username',
+                    labelText: 'Username or Email',
+                    hintText: 'Enter username or email',
                     prefixIcon: const Icon(Icons.person),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
                   textInputAction: TextInputAction.next,
+                  keyboardType: TextInputType.emailAddress,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Please enter your username';
+                      return 'Please enter username or email';
                     }
                     return null;
                   },
@@ -155,6 +264,21 @@ class _LoginScreenState extends State<LoginScreen> {
                 
                 const SizedBox(height: 32),
                 
+                // Test Connection Button
+                OutlinedButton.icon(
+                  onPressed: _testConnection,
+                  icon: const Icon(Icons.wifi_find),
+                  label: const Text('Test Backend Connection'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+                
+                const SizedBox(height: 16),
+                
                 // Login Button
                 Consumer<AuthProvider>(
                   builder: (context, authProvider, child) {
@@ -165,6 +289,80 @@ class _LoginScreenState extends State<LoginScreen> {
                       isLoading: authProvider.isLoading,
                     );
                   },
+                ),
+                
+                const SizedBox(height: 24),
+
+                // Register Link
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        "Don't have an account? ",
+                        style: TextStyle(color: Colors.grey[600]),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const RegisterScreen(),
+                            ),
+                          );
+                        },
+                        child: const Text(
+                          'Register Here',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 24),
+
+
+
+           
+
+                
+                // Test Credentials Info
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.info_outline, color: Colors.blue[700], size: 20),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Test Credentials',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue[700],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Username: conductor1\nPassword: conductor123',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[700],
+                          fontFamily: 'monospace',
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
                 ),
                 
                 const SizedBox(height: 24),
