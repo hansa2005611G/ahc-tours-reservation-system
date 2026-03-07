@@ -115,6 +115,36 @@ const getBookingById = async (bookingId) => {
   }
 };
 
+// Get booking by reference - NEW FUNCTION
+const getBookingByReference = async (bookingReference) => {
+  try {
+    console.log('📊 Querying booking by reference:', bookingReference);
+    
+    const [rows] = await db.query(
+      `SELECT 
+        b.*,
+        s.journey_date, s.departure_time, s.arrival_time, s.schedule_id,
+        r.origin, r.destination, r.route_name, r.base_fare,
+        bus.bus_number, bus.bus_name, bus.bus_type,
+        u.username, u.email as user_email
+      FROM bookings b
+      JOIN schedules s ON b.schedule_id = s.schedule_id
+      JOIN routes r ON s.route_id = r.route_id
+      JOIN buses bus ON s.bus_id = bus.bus_id
+      LEFT JOIN users u ON b.user_id = u.user_id
+      WHERE b.booking_reference = ?`,
+      [bookingReference]
+    );
+    
+    console.log('📊 Query result:', rows.length > 0 ? 'Found' : 'Not found');
+    
+    return rows[0];
+  } catch (error) {
+    console.error('❌ Error in getBookingByReference:', error);
+    throw error;
+  }
+};
+
 // Get booking by seat (check if seat is already booked)
 const getBookingBySeat = async (schedule_id, seat_number) => {
   try {
@@ -184,12 +214,37 @@ const getBookingStats = async () => {
   }
 };
 
+// Get user's bookings
+const getUserBookings = async (userId) => {
+  try {
+    const [rows] = await db.query(
+      `SELECT 
+        b.*,
+        s.journey_date, s.departure_time, s.arrival_time,
+        r.origin, r.destination, r.route_name,
+        bus.bus_number, bus.bus_name, bus.bus_type
+      FROM bookings b
+      JOIN schedules s ON b.schedule_id = s.schedule_id
+      JOIN routes r ON s.route_id = r.route_id
+      JOIN buses bus ON s.bus_id = bus.bus_id
+      WHERE b.user_id = ?
+      ORDER BY b.booking_date DESC`,
+      [userId]
+    );
+    return rows;
+  } catch (error) {
+    throw error;
+  }
+};
+
 module.exports = {
   createBooking,
   getAllBookings,
   getBookingById,
+  getBookingByReference, // ← ADDED THIS
   getBookingBySeat,
   updateBooking,
   deleteBooking,
-  getBookingStats
+  getBookingStats,
+  getUserBookings // ← ADDED THIS TOO
 };

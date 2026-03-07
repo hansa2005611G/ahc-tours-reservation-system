@@ -27,10 +27,9 @@ class ApiService {
     }
   }
 
-  // Login - FIXED to support both username and email
+  // Login
   Future<Map<String, dynamic>> login(String username, String password) async {
     try {
-      // Determine if input is email or username
       final isEmail = username.contains('@');
       
       final body = {
@@ -38,7 +37,7 @@ class ApiService {
         'password': password,
       };
 
-      print('🔐 LOGIN REQUEST: $body'); // Debug
+      print('🔐 LOGIN REQUEST: $body');
 
       final response = await http.post(
         Uri.parse('${AppConstants.baseUrl}${AppConstants.loginEndpoint}'),
@@ -46,12 +45,11 @@ class ApiService {
         body: jsonEncode(body),
       );
 
-      print('Response: ${response.statusCode} - ${response.body}'); // Debug
+      print('Response: ${response.statusCode} - ${response.body}');
 
       final data = jsonDecode(response.body);
 
       if (response.statusCode == 200 && data['success']) {
-        // Save token and user data
         await _storage.saveToken(data['data']['token']);
         await _storage.saveUser(jsonEncode(data['data']['user']));
         return data;
@@ -59,12 +57,12 @@ class ApiService {
         throw Exception(data['message'] ?? 'Login failed');
       }
     } catch (e) {
-      print('❌ Login error: $e'); // Debug
+      print('❌ Login error: $e');
       throw Exception('Login error: $e');
     }
   }
 
-  // Register - NEW METHOD
+  // Register
   Future<Map<String, dynamic>> register({
     required String username,
     required String email,
@@ -81,7 +79,7 @@ class ApiService {
         'phone': phone,
       };
 
-      print('📝 REGISTER REQUEST: $body'); // Debug
+      print('📝 REGISTER REQUEST: $body');
 
       final response = await http.post(
         Uri.parse('${AppConstants.baseUrl}${AppConstants.registerEndpoint}'),
@@ -89,12 +87,11 @@ class ApiService {
         body: jsonEncode(body),
       );
 
-      print('Response: ${response.statusCode} - ${response.body}'); // Debug
+      print('Response: ${response.statusCode} - ${response.body}');
 
       final data = jsonDecode(response.body);
 
       if (response.statusCode == 201 && data['success']) {
-        // Save token and user data
         await _storage.saveToken(data['data']['token']);
         await _storage.saveUser(jsonEncode(data['data']['user']));
         return data;
@@ -102,7 +99,7 @@ class ApiService {
         throw Exception(data['message'] ?? 'Registration failed');
       }
     } catch (e) {
-      print('❌ Register error: $e'); // Debug
+      print('❌ Register error: $e');
       throw Exception('Registration error: $e');
     }
   }
@@ -112,14 +109,48 @@ class ApiService {
     await _storage.clearAll();
   }
 
-  // Verify QR Code
+  // Verify QR Code - FIXED VERSION
   Future<Map<String, dynamic>> verifyQRCode(String qrData) async {
     try {
+      print('═══════════════════════════════════════');
+      print('📱 QR VERIFICATION');
+      print('Raw QR Data: $qrData');
+      
+      // Parse QR code data (it's JSON)
+      Map<String, dynamic> qrContent;
+      try {
+        qrContent = jsonDecode(qrData);
+        print('Parsed QR Content: $qrContent');
+      } catch (e) {
+        print('❌ Failed to parse QR data as JSON: $e');
+        throw Exception('Invalid QR code format');
+      }
+
+      // Extract booking_reference
+      final bookingReference = qrContent['booking_reference'];
+      
+      if (bookingReference == null) {
+        throw Exception('Booking reference not found in QR code');
+      }
+
+      print('Booking Reference: $bookingReference');
+
+      // Send to backend with correct field name
+      final requestBody = {
+        'booking_reference': bookingReference,  // ✅ Correct field name
+      };
+
+      print('Request Body: $requestBody');
+
       final response = await http.post(
         Uri.parse('${AppConstants.baseUrl}${AppConstants.verifyQREndpoint}'),
         headers: await _getHeaders(),
-        body: jsonEncode({'qr_data': qrData}),
+        body: jsonEncode(requestBody),
       );
+
+      print('Response Status: ${response.statusCode}');
+      print('Response Body: ${response.body}');
+      print('═══════════════════════════════════════');
 
       final data = jsonDecode(response.body);
 
@@ -129,6 +160,8 @@ class ApiService {
         throw Exception(data['message'] ?? 'Verification failed');
       }
     } catch (e) {
+      print('❌ QR verification error: $e');
+      print('═══════════════════════════════════════');
       throw Exception('QR verification error: $e');
     }
   }
