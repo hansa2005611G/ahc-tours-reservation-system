@@ -3,7 +3,6 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
 import 'package:conductor_app/providers/booking_provider.dart';
 import 'package:conductor_app/screens/ticket_verification_screen.dart';
-// import 'package:vibration/vibration.dart'; // REMOVED
 
 class QRScannerScreen extends StatefulWidget {
   const QRScannerScreen({Key? key}) : super(key: key);
@@ -13,52 +12,91 @@ class QRScannerScreen extends StatefulWidget {
 }
 
 class _QRScannerScreenState extends State<QRScannerScreen> {
-  final MobileScannerController controller = MobileScannerController(
-    detectionSpeed: DetectionSpeed.noDuplicates,
-  );
+  MobileScannerController cameraController = MobileScannerController();
   bool _isProcessing = false;
 
   @override
   void dispose() {
-    controller.dispose();
+    cameraController.dispose();
     super.dispose();
   }
 
-  Future<void> _handleQRCode(String qrData) async {
+  Future<void> _onDetect(BarcodeCapture capture) async {
     if (_isProcessing) return;
+
+    final List<Barcode> barcodes = capture.barcodes;
+    if (barcodes.isEmpty) return;
+
+    final String? qrData = barcodes.first.rawValue;
+    if (qrData == null || qrData.isEmpty) return;
 
     setState(() {
       _isProcessing = true;
     });
 
+    print('═══════════════════════════════════════');
+    print('📱 QR SCANNER: Detected QR Code');
+    print('Raw data: $qrData');
+    print('═══════════════════════════════════════');
 
-    final bookingProvider = Provider.of<BookingProvider>(context, listen: false);
-    final success = await bookingProvider.verifyQR(qrData);
+    try {
+      final bookingProvider = Provider.of<BookingProvider>(context, listen: false);
+      
+      print('Calling verifyQR...');
+      final success = await bookingProvider.verifyQR(qrData);
+      
+      print('Verification result: $success');
+      print('Current booking: ${bookingProvider.currentBooking}');
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    if (success) {
-      // Navigate to verification screen
-      await Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const TicketVerificationScreen(),
-        ),
-      );
-    } else {
-      // Show error
+      if (success && bookingProvider.currentBooking != null) {
+        print('✅ Success! Navigating to verification screen...');
+        
+        // Stop camera before navigation
+        await cameraController.stop();
+        
+        // Navigate to ticket verification screen
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const TicketVerificationScreen(),
+          ),
+        );
+      } else {
+        print('❌ Verification failed');
+        
+        // Show error
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(bookingProvider.error ?? 'Verification failed'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+        
+        setState(() {
+          _isProcessing = false;
+        });
+      }
+    } catch (e, stackTrace) {
+      print('❌ QR Scanner Error: $e');
+      print('Stack trace: $stackTrace');
+
+      if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(bookingProvider.error ?? 'Verification failed'),
+          content: Text('Error: ${e.toString()}'),
           backgroundColor: Colors.red,
-          duration: const Duration(seconds: 3),
+          duration: const Duration(seconds: 5),
         ),
       );
-    }
 
-    setState(() {
-      _isProcessing = false;
-    });
+      setState(() {
+        _isProcessing = false;
+      });
+    }
   }
 
   @override
@@ -68,92 +106,72 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
         title: const Text('Scan QR Code'),
         actions: [
           IconButton(
-            icon: ValueListenableBuilder(
-              valueListenable: controller.torchState,
-              builder: (context, state, child) {
-                switch (state) {
-                  case TorchState.off:
-                    return const Icon(Icons.flash_off);
-                  case TorchState.on:
-                    return const Icon(Icons.flash_on);
-                  default:
-                    return const Icon(Icons.flash_off);
-                }
-              },
-            ),
-            onPressed: () => controller.toggleTorch(),
+            icon: const Icon(Icons.flash_on),
+            onPressed: () => cameraController.toggleTorch(),
           ),
           IconButton(
-            icon: const Icon(Icons.flip_camera_ios),
-            onPressed: () => controller.switchCamera(),
+            icon: const Icon(Icons.cameraswitch),
+            onPressed: () => cameraController.switchCamera(),
           ),
         ],
       ),
       body: Stack(
         children: [
-          // Camera view
           MobileScanner(
-            controller: controller,
-            onDetect: (capture) {
-              final List<Barcode> barcodes = capture.barcodes;
-              for (final barcode in barcodes) {
-                if (barcode.rawValue != null && !_isProcessing) {
-                  _handleQRCode(barcode.rawValue!);
-                  break;
-                }
-              }
-            },
+            controller: cameraController,
+            onDetect: _onDetect,
           ),
-
-          // Overlay
-          CustomPaint(
-            painter: ScannerOverlay(),
-            child: Container(),
+          
+          // Scan area overlay
+          Center(
+            child: Container(
+              width: 250,
+              height: 250,
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.green, width: 3),
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
           ),
-
+          
           // Instructions
           Positioned(
             bottom: 100,
             left: 0,
             right: 0,
             child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 24),
+              margin: const EdgeInsets.symmetric(horizontal: 32),
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: Colors.black.withOpacity(0.7),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    _isProcessing ? Icons.hourglass_empty : Icons.qr_code_scanner,
-                    color: Colors.white,
-                    size: 32,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    _isProcessing
-                        ? 'Verifying ticket...'
-                        : 'Position QR code within the frame',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+              child: const Text(
+                'Position the QR code within the frame',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                ),
               ),
             ),
           ),
-
-          // Loading indicator
+          
+          // Processing indicator
           if (_isProcessing)
             Container(
               color: Colors.black.withOpacity(0.5),
               child: const Center(
-                child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(color: Colors.white),
+                    SizedBox(height: 16),
+                    Text(
+                      'Verifying ticket...',
+                      style: TextStyle(color: Colors.white, fontSize: 16),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -161,55 +179,4 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
       ),
     );
   }
-}
-
-// Scanner overlay painter (keep as is)
-class ScannerOverlay extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final double scanAreaSize = size.width * 0.7;
-    final double left = (size.width - scanAreaSize) / 2;
-    final double top = (size.height - scanAreaSize) / 2;
-
-    final backgroundPath = Path()
-      ..addRect(Rect.fromLTWH(0, 0, size.width, size.height));
-
-    final scanAreaPath = Path()
-      ..addRRect(
-        RRect.fromRectAndRadius(
-          Rect.fromLTWH(left, top, scanAreaSize, scanAreaSize),
-          const Radius.circular(12),
-        ),
-      );
-
-    final overlayPath = Path.combine(
-      PathOperation.difference,
-      backgroundPath,
-      scanAreaPath,
-    );
-
-    canvas.drawPath(
-      overlayPath,
-      Paint()..color = Colors.black.withOpacity(0.6),
-    );
-
-    final paint = Paint()
-      ..color = Colors.green
-      ..strokeWidth = 4
-      ..style = PaintingStyle.stroke;
-
-    const cornerLength = 30.0;
-
-    canvas.drawLine(Offset(left, top), Offset(left + cornerLength, top), paint);
-    canvas.drawLine(Offset(left, top), Offset(left, top + cornerLength), paint);
-    canvas.drawLine(Offset(left + scanAreaSize, top), Offset(left + scanAreaSize - cornerLength, top), paint);
-    canvas.drawLine(Offset(left + scanAreaSize, top), Offset(left + scanAreaSize, top + cornerLength), paint);
-    canvas.drawLine(Offset(left, top + scanAreaSize), Offset(left + cornerLength, top + scanAreaSize), paint);
-    canvas.drawLine(Offset(left, top + scanAreaSize), Offset(left, top + scanAreaSize - cornerLength), paint);
-    canvas.drawLine(Offset(left + scanAreaSize, top + scanAreaSize), Offset(left + scanAreaSize - cornerLength, top + scanAreaSize), paint);
-    canvas.drawLine(Offset(left + scanAreaSize, top + scanAreaSize), Offset(left + scanAreaSize, top + scanAreaSize - cornerLength), paint);
-  }
-
-  @override
-  bool shouldRepaint(CustomPainter oldDelegate) => false;
 }

@@ -213,6 +213,95 @@ class ApiService {
     }
   }
 
+  // Search bookings
+Future<List<dynamic>> searchBookings(String query, {String type = 'all'}) async {
+  try {
+    print('🔍 Searching bookings: query=$query, type=$type');
+    
+    final response = await http.get(
+      Uri.parse('${AppConstants.baseUrl}/qr/search?q=$query&type=$type'),
+      headers: await _getHeaders(),
+    );
+
+    print('Response: ${response.statusCode}');
+
+    final data = jsonDecode(response.body);
+
+    if (response.statusCode == 200 && data['success']) {
+      return data['data']['bookings'] as List<dynamic>;
+    } else {
+      throw Exception(data['message'] ?? 'Search failed');
+    }
+  } catch (e) {
+    print('❌ Search error: $e');
+    throw Exception('Search error: $e');
+  }
+}
+
+// Get schedule details
+Future<Map<String, dynamic>> getScheduleDetails(int scheduleId) async {
+  try {
+    print('📋 Getting schedule details: $scheduleId');
+    
+    final response = await http.get(
+      Uri.parse('${AppConstants.baseUrl}/qr/schedule/$scheduleId/details'),
+      headers: await _getHeaders(),
+    );
+
+    print('Response: ${response.statusCode}');
+
+    final data = jsonDecode(response.body);
+
+    if (response.statusCode == 200 && data['success']) {
+      return data['data'];
+    } else {
+      throw Exception(data['message'] ?? 'Failed to fetch schedule details');
+    }
+  } catch (e) {
+    print('❌ Get schedule details error: $e');
+    throw Exception('Get schedule details error: $e');
+  }
+}
+
+// Get filtered bookings
+Future<List<dynamic>> getFilteredBookings({
+  String? paymentStatus,
+  String? verificationStatus,
+  String? dateFrom,
+  String? dateTo,
+  int? scheduleId,
+}) async {
+  try {
+    final queryParams = <String, String>{};
+    
+    if (paymentStatus != null) queryParams['payment_status'] = paymentStatus;
+    if (verificationStatus != null) queryParams['verification_status'] = verificationStatus;
+    if (dateFrom != null) queryParams['date_from'] = dateFrom;
+    if (dateTo != null) queryParams['date_to'] = dateTo;
+    if (scheduleId != null) queryParams['schedule_id'] = scheduleId.toString();
+    
+    final uri = Uri.parse('${AppConstants.baseUrl}/qr/bookings/filter')
+        .replace(queryParameters: queryParams);
+    
+    print('🎛️ Filtering bookings: $queryParams');
+    
+    final response = await http.get(uri, headers: await _getHeaders());
+
+    print('Response: ${response.statusCode}');
+
+    final data = jsonDecode(response.body);
+
+    if (response.statusCode == 200 && data['success']) {
+      return data['data']['bookings'] as List<dynamic>;
+    } else {
+      throw Exception(data['message'] ?? 'Filter failed');
+    }
+  } catch (e) {
+    print('❌ Filter error: $e');
+    throw Exception('Filter error: $e');
+  }
+}
+
   // Get schedule bookings
   Future<List<dynamic>> getScheduleBookings(int scheduleId) async {
     try {

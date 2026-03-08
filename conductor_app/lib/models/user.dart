@@ -15,19 +15,24 @@ class User {
     this.phone,
   });
 
-  // From JSON (backend response)
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
-      userId: json['user_id'] ?? json['userId'] ?? 0,
-      username: json['username'] ?? '',
-      email: json['email'] ?? '',
-      role: json['role'] ?? '',
-      fullName: json['full_name'] ?? json['fullName'],
-      phone: json['phone'],
+      userId: _parseInt(json['user_id']),
+      username: json['username']?.toString() ?? '',
+      email: json['email']?.toString() ?? '',
+      role: json['role']?.toString() ?? '',
+      fullName: json['full_name']?.toString(),
+      phone: json['phone']?.toString(),
     );
   }
 
-  // To JSON (for storage)
+  static int _parseInt(dynamic value) {
+    if (value == null) return 0;
+    if (value is int) return value;
+    if (value is String) return int.tryParse(value) ?? 0;
+    return 0;
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'user_id': userId,

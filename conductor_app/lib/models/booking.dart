@@ -39,27 +39,41 @@ class Booking {
 
   factory Booking.fromJson(Map<String, dynamic> json) {
     return Booking(
-      bookingId: json['booking_id'],
-      bookingReference: json['booking_reference'],
-      passengerName: json['passenger_name'],
-      passengerEmail: json['passenger_email'],
-      passengerPhone: json['passenger_phone'],
-      seatNumber: json['seat_number'],
-      totalAmount: json['total_amount'].toString(),
-      paymentStatus: json['payment_status'],
-      verificationStatus: json['verification_status'],
-      journeyDate: json['journey_date'],
-      departureTime: json['departure_time'],
-      arrivalTime: json['arrival_time'],
-      origin: json['origin'],
-      destination: json['destination'],
-      busNumber: json['bus_number'],
-      busType: json['bus_type'],
-      qrCode: json['qr_code'],
+      bookingId: _toInt(json['booking_id']), // ← FIXED: Safe conversion
+      bookingReference: json['booking_reference']?.toString() ?? '',
+      passengerName: json['passenger_name']?.toString() ?? '',
+      passengerEmail: json['passenger_email']?.toString() ?? '',
+      passengerPhone: json['passenger_phone']?.toString() ?? '',
+      seatNumber: json['seat_number']?.toString() ?? '',
+      totalAmount: json['total_amount']?.toString() ?? '0',
+      paymentStatus: json['payment_status']?.toString() ?? '',
+      verificationStatus: json['verification_status']?.toString() ?? '',
+      journeyDate: json['journey_date']?.toString() ?? '',
+      departureTime: json['departure_time']?.toString() ?? '',
+      arrivalTime: json['arrival_time']?.toString() ?? '',
+      origin: json['origin']?.toString() ?? '',
+      destination: json['destination']?.toString() ?? '',
+      busNumber: json['bus_number']?.toString() ?? '',
+      busType: json['bus_type']?.toString() ?? '',
+      qrCode: json['qr_code']?.toString(),
     );
+  }
+
+  // Helper method to safely convert to int
+  static int _toInt(dynamic value) {
+    if (value == null) return 0;
+    if (value is int) return value;
+    if (value is String) return int.tryParse(value) ?? 0;
+    if (value is double) return value.toInt();
+    return 0;
   }
 
   bool get isPayOnBus => paymentStatus == 'pay_on_bus';
   bool get isUsed => verificationStatus == 'used';
   bool get isCancelled => paymentStatus == 'refunded';
+
+  @override
+  String toString() {
+    return 'Booking(id: $bookingId, ref: $bookingReference, passenger: $passengerName)';
+  }
 }
