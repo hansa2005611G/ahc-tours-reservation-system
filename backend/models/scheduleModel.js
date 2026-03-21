@@ -205,10 +205,11 @@ const getBookedSeats = async (scheduleId) => {
   }
 };
 
-// Update available seats
-const updateAvailableSeats = async (scheduleId, seatsToReduce) => {
+// Update available seats (optionally within a transaction)
+const updateAvailableSeats = async (scheduleId, seatsToReduce, conn) => {
+  const executor = conn || db;
   try {
-    const [result] = await db.query(
+    const [result] = await executor.query(
       'UPDATE schedules SET available_seats = available_seats - ? WHERE schedule_id = ?',
       [seatsToReduce, scheduleId]
     );

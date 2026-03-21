@@ -1,7 +1,8 @@
 const db = require('../config/database');
 
-// Create a new booking
-const createBooking = async (bookingData) => {
+// Create a new booking (optionally within a transaction)
+const createBooking = async (bookingData, conn) => {
+  const executor = conn || db;
   const {
     user_id,
     schedule_id,
@@ -16,7 +17,7 @@ const createBooking = async (bookingData) => {
   } = bookingData;
 
   try {
-    const [result] = await db.query(
+    const [result] = await executor.query(
       `INSERT INTO bookings 
        (user_id, schedule_id, seat_number, passenger_name, passenger_email, passenger_phone, 
         total_amount, payment_status, booking_reference, verification_status, booking_date) 
@@ -162,20 +163,33 @@ const getBookingBySeat = async (schedule_id, seat_number) => {
   }
 };
 
-// Update booking
-const updateBooking = async (bookingId, updateData) => {
+// Update booking (optionally within a transaction)
+const updateBooking = async (bookingId, updateData, conn) => {
+  const executor = conn || db;
+  const ALLOWED_FIELDS = new Set([
+    'seat_number', 'passenger_name', 'passenger_email', 'passenger_phone',
+    'total_amount', 'payment_status', 'verification_status', 'qr_code',
+    'booking_reference', 'booking_date'
+  ]);
+
   const fields = [];
   const values = [];
 
   Object.keys(updateData).forEach(key => {
-    fields.push(`${key} = ?`);
-    values.push(updateData[key]);
+    if (ALLOWED_FIELDS.has(key)) {
+      fields.push(`${key} = ?`);
+      values.push(updateData[key]);
+    }
   });
+
+  if (fields.length === 0) {
+    throw new Error('No valid fields to update');
+  }
 
   values.push(bookingId);
 
   try {
-    const [result] = await db.query(
+    const [result] = await executor.query(
       `UPDATE bookings SET ${fields.join(', ')} WHERE booking_id = ?`,
       values
     );
@@ -184,6 +198,9 @@ const updateBooking = async (bookingId, updateData) => {
     throw error;
   }
 };
+
+// Get a raw DB connection for transactions
+const getConnection = () => db.getConnection();
 
 // Delete booking
 const deleteBooking = async (bookingId) => {
@@ -241,10 +258,11 @@ module.exports = {
   createBooking,
   getAllBookings,
   getBookingById,
-  getBookingByReference, // ← ADDED THIS
+  getBookingByReference,
   getBookingBySeat,
   updateBooking,
   deleteBooking,
   getBookingStats,
-  getUserBookings // ← ADDED THIS TOO
+  getUserBookings,
+  getConnection
 };

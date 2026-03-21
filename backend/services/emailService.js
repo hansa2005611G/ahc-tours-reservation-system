@@ -395,7 +395,7 @@ const sendAdminCancellationAlert = async (cancellationData) => {
 
     const mailOptions = {
       from: process.env.EMAIL_FROM,
-      to: process.env.EMAIL_USER, // Send to admin email
+      to: process.env.ADMIN_EMAIL || process.env.EMAIL_USER, // Send to admin email
       subject: `🔔 New Cancellation Request - ${booking_reference}`,
       html: emailHtml
     };

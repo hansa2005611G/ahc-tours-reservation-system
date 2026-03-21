@@ -1,9 +1,10 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
+const rateLimit = require('express-rate-limit');
 const config = require('./config/config');
 const { startScheduleAutoGeneration, runInitialGeneration } = require('./utils/scheduleCron');
-
+const { errorHandler, notFound } = require('./middleware/errorMiddleware');
 
 // Load environment variables
 dotenv.config();
@@ -18,6 +19,25 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Rate limiters
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Too many requests, please try again later.' }
+});
+
+const generalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Too many requests, please try again later.' }
+});
+
+app.use('/api/', generalLimiter);
 
 // Static files (for QR codes and uploads)
 app.use('/uploads', express.static('uploads'));
@@ -45,7 +65,7 @@ app.get('/health', (req, res) => {
 });
 
 // Import routes
-app.use('/api/auth', require('./routes/authRoutes'));
+app.use('/api/auth', authLimiter, require('./routes/authRoutes'));
 app.use('/api/buses', require('./routes/busRoutes')); 
 app.use('/api/routes', require('./routes/routeRoutes'));
 app.use('/api/schedules', require('./routes/scheduleRoutes'));
@@ -58,25 +78,9 @@ app.use('/api/cancellations', require('./routes/cancellationRoutes'));
 // TEST ROUTES
 app.use('/api/test', require('./routes/testRoutes'));
 
-// 404 handler
-app.use((req, res) => {
-  res.status(404).json({
-    success: false,
-    message: 'Route not found'
-  });
-});
-
-
-
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error('❌ Error:', err.stack);
-  res.status(err.status || 500).json({ 
-    success: false,
-    message: err.message || 'Something went wrong!',
-    error: config.NODE_ENV === 'development' ? err.stack : {}
-  });
-});
+// 404 and global error handling
+app.use(notFound);
+app.use(errorHandler);
 
 
 

@@ -2,6 +2,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const userModel = require('../models/userModel');
 const jwtConfig = require('../config/jwt');
+const { isValidPassword } = require('../utils/validators');
 
 // Generate JWT Token
 const generateToken = (user) => {
@@ -222,9 +223,66 @@ const updateProfile = async (req, res) => {
   }
 };
 
+// @desc    Change user password
+// @route   PUT /api/auth/change-password
+// @access  Private
+const changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const userId = req.user.user_id;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'currentPassword and newPassword are required.'
+      });
+    }
+
+    if (!isValidPassword(newPassword)) {
+      return res.status(400).json({
+        success: false,
+        message: 'New password must be at least 8 characters long.'
+      });
+    }
+
+    // Fetch user with password hash
+    const [rows] = await require('../config/database').query(
+      'SELECT password_hash FROM users WHERE user_id = ?',
+      [userId]
+    );
+    const user = rows[0];
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password_hash);
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        message: 'Current password is incorrect.'
+      });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const password_hash = await bcrypt.hash(newPassword, salt);
+    await userModel.updateUser(userId, { password_hash });
+
+    res.json({ success: true, message: 'Password changed successfully.' });
+  } catch (error) {
+    console.error('Change password error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error changing password.',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   register,
   login,
   getProfile,
-  updateProfile
+  updateProfile,
+  changePassword
 };

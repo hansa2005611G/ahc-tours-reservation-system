@@ -6,6 +6,7 @@ const jwt = require('jsonwebtoken');
 const db = require('../config/database');
 const { validateRegistration, validateLogin } = require('../middleware/validationMiddleware');
 const { verifyToken } = require('../middleware/authMiddleware');
+const { isValidEmail, isValidPhone } = require('../utils/validators');
 
 // Public routes
 router.post('/register', validateRegistration, authController.register);
@@ -14,6 +15,7 @@ router.post('/login', validateLogin, authController.login);
 // Protected routes
 router.get('/profile', verifyToken, authController.getProfile);
 router.put('/profile', verifyToken, authController.updateProfile);
+router.put('/change-password', verifyToken, authController.changePassword);
 
 // Login
 router.post('/login', async (req, res) => {
@@ -163,11 +165,19 @@ router.post('/register-conductor', async (req, res) => {
       });
     }
 
-    if (password.length < 6) {
+    if (!isValidEmail(email)) {
+      return res.status(400).json({ success: false, message: 'Invalid email address.' });
+    }
+
+    if (password.length < 8) {
       return res.status(400).json({
         success: false,
-        message: 'Password must be at least 6 characters'
+        message: 'Password must be at least 8 characters'
       });
+    }
+
+    if (phone && !isValidPhone(phone)) {
+      return res.status(400).json({ success: false, message: 'Invalid phone number.' });
     }
 
     // Check if username already exists

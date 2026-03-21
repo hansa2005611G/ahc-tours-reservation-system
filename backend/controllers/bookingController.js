@@ -1,7 +1,8 @@
 const bookingModel = require('../models/bookingModel');
 const scheduleModel = require('../models/scheduleModel');
 const qrService = require('../services/qrService'); 
-const emailService = require('../services/emailService'); 
+const emailService = require('../services/emailService');
+const { isValidEmail, isValidPhone, isValidSeatNumber } = require('../utils/validators');
 // @desc    Get all bookings
 // @route   GET /api/bookings
 // @access  Private
@@ -108,7 +109,9 @@ const getBookingByReference = async (req, res) => {
 // @route   POST /api/bookings
 // @access  Private
 const createBooking = async (req, res) => {
+  let conn;
   try {
+    conn = await bookingModel.getConnection();
     const {
       schedule_id,
       seat_number,
@@ -121,24 +124,42 @@ const createBooking = async (req, res) => {
 
     // Validation
     if (!schedule_id || !seat_number || !passenger_name || !passenger_email || !passenger_phone) {
+      conn.release();
       return res.status(400).json({
         success: false,
         message: 'All fields are required.'
       });
     }
 
-    // Get schedule details
+    if (!isValidEmail(passenger_email)) {
+      conn.release();
+      return res.status(400).json({ success: false, message: 'Invalid passenger email address.' });
+    }
+
+    if (!isValidPhone(passenger_phone)) {
+      conn.release();
+      return res.status(400).json({ success: false, message: 'Invalid passenger phone number.' });
+    }
+
+    if (!isValidSeatNumber(seat_number)) {
+      conn.release();
+      return res.status(400).json({ success: false, message: 'Invalid seat number format (e.g. A1, B12).' });
+    }
+
+    // Get schedule details (outside transaction – read-only)
     const schedule = await scheduleModel.getScheduleById(schedule_id);
     if (!schedule) {
+      conn.release();
       return res.status(404).json({
         success: false,
         message: 'Schedule not found.'
       });
     }
 
-    // Check if seat is already booked
+    // Check if seat is already booked (outside transaction – read-only)
     const existingBooking = await bookingModel.getBookingBySeat(schedule_id, seat_number);
     if (existingBooking) {
+      conn.release();
       return res.status(400).json({
         success: false,
         message: 'This seat is already booked.'
@@ -147,6 +168,7 @@ const createBooking = async (req, res) => {
 
     // Check if seats are available
     if (schedule.available_seats <= 0) {
+      conn.release();
       return res.status(400).json({
         success: false,
         message: 'No seats available for this schedule.'
@@ -155,6 +177,9 @@ const createBooking = async (req, res) => {
 
     // Generate unique booking reference
     const booking_reference = `AHC-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+
+    // --- Begin transaction ---
+    await conn.beginTransaction();
 
     // Create booking with "Pay on Bus" status
     const booking = await bookingModel.createBooking({
@@ -165,12 +190,12 @@ const createBooking = async (req, res) => {
       passenger_email,
       passenger_phone,
       total_amount: schedule.base_fare,
-      payment_status: 'pay_on_bus', // ← Changed from 'pending'
+      payment_status: 'pay_on_bus',
       booking_reference,
       verification_status: 'pending'
-    });
+    }, conn);
 
-    // Generate QR Code immediately
+    // Generate QR Code
     const qrCode = await qrService.generateQRCode({
       booking_reference: booking_reference,
       passenger_name: passenger_name,
@@ -183,15 +208,19 @@ const createBooking = async (req, res) => {
     // Update booking with QR code
     await bookingModel.updateBooking(booking.booking_id, {
       qr_code: qrCode.qr_code_base64
-    });
+    }, conn);
 
     // Decrease available seats
-    await scheduleModel.updateAvailableSeats(schedule_id, 1);
+    await scheduleModel.updateAvailableSeats(schedule_id, 1, conn);
 
-    // Get complete booking details
+    // Commit transaction
+    await conn.commit();
+    conn.release();
+
+    // Get complete booking details (outside transaction)
     const completeBooking = await bookingModel.getBookingById(booking.booking_id);
 
-    // Send booking confirmation email
+    // Send booking confirmation email (best-effort)
     try {
       await emailService.sendBookingConfirmation({
         passenger_email: completeBooking.passenger_email,
@@ -222,6 +251,10 @@ const createBooking = async (req, res) => {
       }
     });
   } catch (error) {
+    if (conn) {
+      await conn.rollback().catch((rbErr) => console.error('Rollback error:', rbErr));
+      conn.release();
+    }
     console.error('Create booking error:', error);
     res.status(500).json({
       success: false,

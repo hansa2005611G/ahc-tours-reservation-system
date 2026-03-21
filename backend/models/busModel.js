@@ -76,16 +76,23 @@ const createBus = async (busData) => {
 
 // Update bus
 const updateBus = async (busId, updateData) => {
+  const ALLOWED_FIELDS = new Set([
+    'bus_number', 'bus_name', 'bus_type', 'total_seats', 'status',
+    'status_reason', 'status_updated_at', 'status_updated_by'
+  ]);
+
   const fields = [];
   const values = [];
 
   Object.keys(updateData).forEach(key => {
-    fields.push(`${key} = ?`);
-    values.push(updateData[key]);
+    if (ALLOWED_FIELDS.has(key)) {
+      fields.push(`${key} = ?`);
+      values.push(updateData[key]);
+    }
   });
 
   if (fields.length === 0) {
-    throw new Error('No fields to update');
+    throw new Error('No valid fields to update');
   }
 
   values.push(busId);
