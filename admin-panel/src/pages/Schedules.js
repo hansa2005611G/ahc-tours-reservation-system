@@ -26,7 +26,7 @@ import {
   Edit as EditIcon,
   Delete as DeleteIcon,
 } from '@mui/icons-material';
-import { scheduleAPI, busAPI, routeAPI } from '../services/api';
+import { scheduleAPI, busAPI, routeAPI, apiWithRetry } from '../services/api';
 
 const Schedules = () => {
   const [schedules, setSchedules] = useState([]);
@@ -54,17 +54,20 @@ const Schedules = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
+      setError('');
       const [schedulesRes, busesRes, routesRes] = await Promise.all([
-        scheduleAPI.getAll(),
-        busAPI.getAll(),
-        routeAPI.getAll()
+        apiWithRetry(() => scheduleAPI.getAll()).catch((err) => { err.resource = 'schedules'; throw err; }),
+        apiWithRetry(() => busAPI.getAll()).catch((err) => { err.resource = 'buses'; throw err; }),
+        apiWithRetry(() => routeAPI.getAll()).catch((err) => { err.resource = 'routes'; throw err; })
       ]);
-      setSchedules(schedulesRes.data.data.schedules);
-      setBuses(busesRes.data.data.buses);
-      setRoutes(routesRes.data.data.routes);
-    } catch (error) {
-      console.error('Error fetching data:', error);
-      setError('Failed to fetch data');
+      setSchedules(schedulesRes.data.data.schedules || []);
+      setBuses(busesRes.data.data.buses || []);
+      setRoutes(routesRes.data.data.routes || []);
+    } catch (err) {
+      console.error('Error fetching data:', err);
+      const detail = err.userMessage || err.message || 'Unknown error';
+      const resource = err.resource || 'data';
+      setError(`Failed to fetch ${resource}: ${detail}`);
     } finally {
       setLoading(false);
     }
@@ -183,7 +186,16 @@ const Schedules = () => {
       </Box>
 
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
+        <Alert
+          severity="error"
+          sx={{ mb: 2 }}
+          onClose={() => setError('')}
+          action={
+            <Button color="inherit" size="small" onClick={fetchData}>
+              Retry
+            </Button>
+          }
+        >
           {error}
         </Alert>
       )}
