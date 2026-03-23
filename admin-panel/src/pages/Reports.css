@@ -1,0 +1,155 @@
+.reports-page {
+  padding: 24px;
+  background: #f5f7fb;
+  min-height: calc(100vh - 64px);
+}
+
+.reports-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.reports-header h1 {
+  margin: 0;
+  font-size: 30px;
+}
+
+.reports-header p {
+  margin: 6px 0 0;
+  color: #6b7280;
+}
+
+.filters {
+  display: flex;
+  gap: 8px;
+}
+
+.filters input,
+.filters button {
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid #d1d5db;
+  padding: 0 12px;
+}
+
+.filters button {
+  border: none;
+  color: #fff;
+  font-weight: 700;
+  background: linear-gradient(135deg, #5b6eea, #764ba2);
+  cursor: pointer;
+}
+
+.error-box {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+  padding: 10px 12px;
+  border-radius: 10px;
+  margin-bottom: 14px;
+}
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.kpi-card {
+  background: #fff;
+  border: 1px solid #eef2f7;
+  border-radius: 14px;
+  padding: 14px;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+}
+
+.kpi-label {
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.kpi-card h3 {
+  margin: 8px 0 0;
+  font-size: 24px;
+}
+
+.charts-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.panel {
+  background: #fff;
+  border: 1px solid #eef2f7;
+  border-radius: 14px;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+}
+
+.panel-full {
+  grid-column: 1 / -1;
+}
+
+.panel-head {
+  padding: 12px 14px;
+  border-bottom: 1px solid #eef2f7;
+}
+
+.panel-head h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.chart-box {
+  padding: 10px 10px 2px;
+}
+
+.export-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.export-row button {
+  height: 38px;
+  border: none;
+  border-radius: 10px;
+  padding: 0 12px;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  background: linear-gradient(135deg, #374151, #111827);
+}
+
+@media (max-width: 1024px) {
+  .kpi-grid {
+    grid-template-columns: repeat(2, minmax(180px, 1fr));
+  }
+  .charts-grid {
+    grid-template-columns: 1fr;
+  }
+  .panel-full {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 640px) {
+  .reports-page {
+    padding: 12px;
+  }
+  .kpi-grid {
+    grid-template-columns: 1fr;
+  }
+  .filters {
+    flex-wrap: wrap;
+  }
+  .filters input,
+  .filters button {
+    width: 100%;
+  }
+}

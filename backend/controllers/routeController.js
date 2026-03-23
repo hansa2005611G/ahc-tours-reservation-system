@@ -6,13 +6,19 @@ const routeModel = require('../models/routeModel');
 const getAllRoutes = async (req, res) => {
   try {
     const { origin, destination, search } = req.query;
-    
+
     const filters = {};
     if (origin) filters.origin = origin;
     if (destination) filters.destination = destination;
     if (search) filters.search = search;
 
-    const routes = await routeModel.getAllRoutes(filters);
+    // Support both model naming styles safely
+    const getAllRoutesFn = routeModel.getAllRoutes || routeModel.getRoutes;
+    if (!getAllRoutesFn) {
+      throw new Error('Route model function missing: getAllRoutes/getRoutes');
+    }
+
+    const routes = await getAllRoutesFn(filters);
 
     res.json({
       success: true,
@@ -65,15 +71,13 @@ const createRoute = async (req, res) => {
   try {
     const { route_name, origin, destination, distance_km, duration_hours, base_fare } = req.body;
 
-    // Validation
-    if (!origin || !destination || !base_fare) {
+    if (!origin || !destination || base_fare === undefined || base_fare === null) {
       return res.status(400).json({
         success: false,
         message: 'Origin, destination, and base fare are required.'
       });
     }
 
-    // Check if route already exists
     const existingRoute = await routeModel.getRouteByOriginDestination(origin, destination);
     if (existingRoute) {
       return res.status(400).json({
@@ -82,18 +86,15 @@ const createRoute = async (req, res) => {
       });
     }
 
-    // Validate base fare
-    if (base_fare < 0) {
+    if (Number(base_fare) < 0) {
       return res.status(400).json({
         success: false,
         message: 'Base fare must be a positive number.'
       });
     }
 
-    // Create route name if not provided
     const finalRouteName = route_name || `${origin} to ${destination}`;
 
-    // Create route
     const newRoute = await routeModel.createRoute({
       route_name: finalRouteName,
       origin,
@@ -126,7 +127,6 @@ const updateRoute = async (req, res) => {
     const { id } = req.params;
     const updateData = req.body;
 
-    // Check if route exists
     const existingRoute = await routeModel.getRouteById(id);
     if (!existingRoute) {
       return res.status(404).json({
@@ -135,15 +135,13 @@ const updateRoute = async (req, res) => {
       });
     }
 
-    // Validate base fare if provided
-    if (updateData.base_fare !== undefined && updateData.base_fare < 0) {
+    if (updateData.base_fare !== undefined && Number(updateData.base_fare) < 0) {
       return res.status(400).json({
         success: false,
         message: 'Base fare must be a positive number.'
       });
     }
 
-    // Update route
     const updated = await routeModel.updateRoute(id, updateData);
 
     if (!updated) {
@@ -153,7 +151,6 @@ const updateRoute = async (req, res) => {
       });
     }
 
-    // Get updated route data
     const updatedRoute = await routeModel.getRouteById(id);
 
     res.json({
@@ -178,7 +175,6 @@ const deleteRoute = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Check if route exists
     const route = await routeModel.getRouteById(id);
     if (!route) {
       return res.status(404).json({
@@ -187,7 +183,6 @@ const deleteRoute = async (req, res) => {
       });
     }
 
-    // Check if route is in use
     const isInUse = await routeModel.isRouteInUse(id);
     if (isInUse) {
       return res.status(400).json({
@@ -196,7 +191,6 @@ const deleteRoute = async (req, res) => {
       });
     }
 
-    // Delete route
     const deleted = await routeModel.deleteRoute(id);
 
     if (!deleted) {
@@ -225,7 +219,7 @@ const deleteRoute = async (req, res) => {
 // @access  Public
 const getPopularRoutes = async (req, res) => {
   try {
-    const limit = parseInt(req.query.limit) || 5;
+    const limit = parseInt(req.query.limit, 10) || 5;
     const routes = await routeModel.getPopularRoutes(limit);
 
     res.json({

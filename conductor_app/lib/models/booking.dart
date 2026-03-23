@@ -39,7 +39,7 @@ class Booking {
 
   factory Booking.fromJson(Map<String, dynamic> json) {
     return Booking(
-      bookingId: _toInt(json['booking_id']), // ← FIXED: Safe conversion
+      bookingId: _toInt(json['booking_id']),
       bookingReference: json['booking_reference']?.toString() ?? '',
       passengerName: json['passenger_name']?.toString() ?? '',
       passengerEmail: json['passenger_email']?.toString() ?? '',
@@ -59,7 +59,6 @@ class Booking {
     );
   }
 
-  // Helper method to safely convert to int
   static int _toInt(dynamic value) {
     if (value == null) return 0;
     if (value is int) return value;
@@ -68,9 +67,15 @@ class Booking {
     return 0;
   }
 
-  bool get isPayOnBus => paymentStatus == 'pay_on_bus';
-  bool get isUsed => verificationStatus == 'used';
-  bool get isCancelled => paymentStatus == 'refunded';
+  // ✅ Added
+  bool get isPaid {
+    final p = paymentStatus.trim().toLowerCase();
+    return p == 'paid' || p == 'completed' || p == 'success';
+  }
+
+  bool get isPayOnBus => paymentStatus.trim().toLowerCase() == 'pay_on_bus';
+  bool get isUsed => verificationStatus.trim().toLowerCase() == 'used';
+  bool get isCancelled => paymentStatus.trim().toLowerCase() == 'refunded';
 
   @override
   String toString() {

@@ -16,6 +16,8 @@ const Booking = () => {
     passenger_email: user?.email || '',
     passenger_phone: user?.phone || ''
   });
+
+  const [paymentMethod, setPaymentMethod] = useState('payhere'); // payhere | pay_on_bus
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -26,44 +28,48 @@ const Booking = () => {
     });
   };
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  setLoading(true);
-  setError('');
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
 
-  try {
-    // Create bookings for all selected seats
-    const bookingPromises = selectedSeats.map(seatNumber => {
-      return bookingAPI.create({
-        schedule_id: schedule.schedule_id,
-        seat_number: seatNumber,
-        passenger_name: formData.passenger_name,
-        passenger_email: formData.passenger_email,
-        passenger_phone: formData.passenger_phone
+    try {
+      const backendPaymentMethod = paymentMethod === 'payhere' ? 'card_payhere' : 'pay_on_bus';
+
+      // create bookings for all seats with chosen payment method
+      const bookingPromises = selectedSeats.map((seatNumber) =>
+        bookingAPI.create({
+          schedule_id: schedule.schedule_id,
+          seat_number: seatNumber,
+          passenger_name: formData.passenger_name,
+          passenger_email: formData.passenger_email,
+          passenger_phone: formData.passenger_phone,
+          payment_method: backendPaymentMethod
+        })
+      );
+
+      const responses = await Promise.all(bookingPromises);
+      const bookings = responses.map((res) => res.data.data.booking);
+
+      // go to Payment page (user can continue with selected method)
+      navigate('/payment', {
+        state: {
+          bookings,
+          schedule,
+          selectedSeats,
+          paymentMethod
+        }
       });
-    });
-
-    const responses = await Promise.all(bookingPromises);
-    const bookings = responses.map(res => res.data.data.booking);
-
-    // Navigate directly to success page (skip payment)
-    navigate('/booking-success', { 
-      state: { 
-        bookings, 
-        schedule, 
-        selectedSeats,
-        paymentMethod: 'pay_on_bus' 
-      } 
-    });
-  } catch (error) {
-    console.error('Booking error:', error);
-    setError(error.response?.data?.message || 'Booking failed. Please try again.');
-  } finally {
-    setLoading(false);
-  }
-};
+    } catch (error) {
+      console.error('Booking error:', error);
+      setError(error.response?.data?.message || 'Booking failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const formatTime = (time) => {
+    if (!time) return '-';
     return new Date(`2000-01-01T${time}`).toLocaleTimeString('en-US', {
       hour: 'numeric',
       minute: '2-digit',
@@ -71,9 +77,7 @@ const handleSubmit = async (e) => {
     });
   };
 
-  const calculateTotalFare = () => {
-    return selectedSeats.length * (schedule?.base_fare || 0);
-  };
+  const calculateTotalFare = () => selectedSeats.length * (schedule?.base_fare || 0);
 
   if (!schedule || !selectedSeats || selectedSeats.length === 0) {
     navigate('/');
@@ -88,7 +92,6 @@ const handleSubmit = async (e) => {
         <h2>Confirm Your Booking</h2>
 
         <div className="booking-container">
-          {/* Booking Form */}
           <div className="booking-form-section">
             <div className="form-card">
               <h3>Passenger Details</h3>
@@ -134,6 +137,31 @@ const handleSubmit = async (e) => {
                   <small>For booking confirmation</small>
                 </div>
 
+                {/* Payment option selector */}
+                <div className="form-group">
+                  <label>Payment Method *</label>
+                  <div style={{ display: 'grid', gap: '10px', marginTop: '8px' }}>
+                    <label style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <input
+                        type="radio"
+                        name="payment_method"
+                        checked={paymentMethod === 'payhere'}
+                        onChange={() => setPaymentMethod('payhere')}
+                      />
+                      Card Payment (PayHere)
+                    </label>
+                    <label style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <input
+                        type="radio"
+                        name="payment_method"
+                        checked={paymentMethod === 'pay_on_bus'}
+                        onChange={() => setPaymentMethod('pay_on_bus')}
+                      />
+                      Pay on Bus
+                    </label>
+                  </div>
+                </div>
+
                 <div className="terms-checkbox">
                   <input type="checkbox" id="terms" required />
                   <label htmlFor="terms">
@@ -142,13 +170,16 @@ const handleSubmit = async (e) => {
                 </div>
 
                 <button type="submit" className="submit-btn" disabled={loading}>
-                  {loading ? 'Processing...' : 'Proceed to Payment'}
+                  {loading
+                    ? 'Processing...'
+                    : paymentMethod === 'payhere'
+                    ? 'Proceed to Card Payment'
+                    : 'Confirm Booking (Pay on Bus)'}
                 </button>
               </form>
             </div>
           </div>
 
-          {/* Booking Summary */}
           <div className="booking-summary-section">
             <div className="summary-card">
               <h3>Journey Summary</h3>
@@ -192,9 +223,7 @@ const handleSubmit = async (e) => {
                 </div>
                 <div className="detail-row">
                   <span>Seat Number{selectedSeats.length > 1 ? 's' : ''}</span>
-                  <span className="value seat">
-                    {selectedSeats.sort((a, b) => a - b).join(', ')}
-                  </span>
+                  <span className="value seat">{[...selectedSeats].sort((a, b) => a - b).join(', ')}</span>
                 </div>
               </div>
 

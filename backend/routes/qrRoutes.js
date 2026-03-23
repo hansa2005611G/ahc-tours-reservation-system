@@ -102,7 +102,7 @@ router.post('/verify', verifyToken, isConductor, async (req, res) => {
     console.log('✅ All checks passed - Ticket is valid!');
     
     // Check if this is a "pay on bus" booking
-    const requiresPayment = booking.payment_status === 'pay_on_bus';
+    const requiresPayment = booking.payment_method === 'pay_on_bus' && booking.payment_status === 'pending';
     
     if (requiresPayment) {
       console.log('💰 Payment required on bus');
@@ -172,7 +172,7 @@ router.post('/mark-used', verifyToken, isConductor, async (req, res) => {
     });
 
     // If payment was received on bus, update payment status
-    if (payment_received && booking.payment_status === 'pay_on_bus') {
+    if (payment_received && booking.payment_method === 'pay_on_bus' && booking.payment_status === 'pending') {
       await bookingModel.updateBooking(booking.booking_id, {
         payment_status: 'completed'
       });

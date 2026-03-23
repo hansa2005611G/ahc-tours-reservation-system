@@ -54,6 +54,7 @@ app.use('/api/bookings', require('./routes/bookingRoutes'));
 app.use('/api/payments', require('./routes/paymentRoutes'));
 app.use('/api/qr', require('./routes/qrRoutes'));  
 app.use('/api/cancellations', require('./routes/cancellationRoutes'));
+app.use('/api/reports', require('./routes/reportRoutes'));
 
 // TEST ROUTES
 app.use('/api/test', require('./routes/testRoutes'));

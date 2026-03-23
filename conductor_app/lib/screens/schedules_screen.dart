@@ -114,7 +114,7 @@ class _SchedulesScreenState extends State<SchedulesScreen> {
             MaterialPageRoute(
               builder: (context) => ScheduleDetailsScreen(
                 scheduleId: schedule['schedule_id'],
-                schedule: schedule,
+                routeName: schedule['route_name'] ?? schedule['route'] ?? 'Unknown Route',
               ),
             ),
           );

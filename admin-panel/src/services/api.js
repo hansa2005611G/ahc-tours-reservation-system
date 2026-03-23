@@ -93,6 +93,23 @@ export const bookingAPI = {
   getStats: () => api.get('/bookings/stats/overview')
 };
 
+export const reportAPI = {
+  getOverview: (from, to) =>
+    api.get('/reports/overview', { params: { from, to } }),
+
+  getRevenueTrend: (from, to, group_by = 'day') =>
+    api.get('/reports/revenue-trend', { params: { from, to, group_by } }),
+
+  getPaymentMethods: (from, to) =>
+    api.get('/reports/payment-methods', { params: { from, to } }),
+
+  getRoutes: (from, to) =>
+    api.get('/reports/routes', { params: { from, to } }),
+
+  getOccupancy: (from, to) =>
+    api.get('/reports/occupancy', { params: { from, to } })
+};
+
 // Payment APIs
 export const paymentAPI = {
   getAll: (params) => api.get('/payments', { params }),

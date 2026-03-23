@@ -1,22 +1,24 @@
 const bookingModel = require('../models/bookingModel');
 const scheduleModel = require('../models/scheduleModel');
-const qrService = require('../services/qrService'); 
-const emailService = require('../services/emailService'); 
+const qrService = require('../services/qrService');
+const emailService = require('../services/emailService');
+
 // @desc    Get all bookings
 // @route   GET /api/bookings
 // @access  Private
 const getAllBookings = async (req, res) => {
   try {
-    const { payment_status, verification_status, journey_date, schedule_id } = req.query;
-    
+    const { payment_status, payment_method, verification_status, journey_date, schedule_id } = req.query;
+
     const filters = {};
-    
+
     // If not admin, only show user's own bookings
     if (req.user.role !== 'admin') {
       filters.user_id = req.user.user_id;
     }
-    
+
     if (payment_status) filters.payment_status = payment_status;
+    if (payment_method) filters.payment_method = payment_method;
     if (verification_status) filters.verification_status = verification_status;
     if (journey_date) filters.journey_date = journey_date;
     if (schedule_id) filters.schedule_id = schedule_id;
@@ -53,7 +55,6 @@ const getBookingById = async (req, res) => {
       });
     }
 
-    // Check if user owns the booking (unless admin)
     if (req.user.role !== 'admin' && booking.user_id !== req.user.user_id) {
       return res.status(403).json({
         success: false,
@@ -104,7 +105,7 @@ const getBookingByReference = async (req, res) => {
   }
 };
 
-/// @desc    Create a new booking
+// @desc    Create a new booking
 // @route   POST /api/bookings
 // @access  Private
 const createBooking = async (req, res) => {
@@ -114,12 +115,12 @@ const createBooking = async (req, res) => {
       seat_number,
       passenger_name,
       passenger_email,
-      passenger_phone
+      passenger_phone,
+      payment_method // NEW: pay_on_bus | card_payhere
     } = req.body;
 
     const user_id = req.user.user_id;
 
-    // Validation
     if (!schedule_id || !seat_number || !passenger_name || !passenger_email || !passenger_phone) {
       return res.status(400).json({
         success: false,
@@ -127,7 +128,9 @@ const createBooking = async (req, res) => {
       });
     }
 
-    // Get schedule details
+    const finalPaymentMethod =
+      payment_method === 'card_payhere' ? 'card_payhere' : 'pay_on_bus';
+
     const schedule = await scheduleModel.getScheduleById(schedule_id);
     if (!schedule) {
       return res.status(404).json({
@@ -136,7 +139,6 @@ const createBooking = async (req, res) => {
       });
     }
 
-    // Check if seat is already booked
     const existingBooking = await bookingModel.getBookingBySeat(schedule_id, seat_number);
     if (existingBooking) {
       return res.status(400).json({
@@ -145,7 +147,6 @@ const createBooking = async (req, res) => {
       });
     }
 
-    // Check if seats are available
     if (schedule.available_seats <= 0) {
       return res.status(400).json({
         success: false,
@@ -153,10 +154,11 @@ const createBooking = async (req, res) => {
       });
     }
 
-    // Generate unique booking reference
-    const booking_reference = `AHC-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+    const booking_reference = `AHC-${Date.now()}-${Math.random().toString(36).substring(2, 11).toUpperCase()}`;
 
-    // Create booking with "Pay on Bus" status
+    // IMPORTANT:
+    // payment_status must stay in enum: pending/completed/failed/refunded
+    // pay_on_bus/card type goes to payment_method column
     const booking = await bookingModel.createBooking({
       user_id,
       schedule_id,
@@ -164,61 +166,73 @@ const createBooking = async (req, res) => {
       passenger_name,
       passenger_email,
       passenger_phone,
+      journey_date: schedule.journey_date || null,
       total_amount: schedule.base_fare,
-      payment_status: 'pay_on_bus', // ← Changed from 'pending'
+      payment_method: finalPaymentMethod,
+      payment_status: 'pending',
       booking_reference,
       verification_status: 'pending'
     });
 
-    // Generate QR Code immediately
-    const qrCode = await qrService.generateQRCode({
-      booking_reference: booking_reference,
-      passenger_name: passenger_name,
-      seat_number: seat_number,
-      journey_date: schedule.journey_date,
-      origin: schedule.origin,
-      destination: schedule.destination
-    });
+    // For pay_on_bus: generate QR immediately
+    // For card_payhere: QR will be generated after payment success in paymentController
+    let qrBase64 = null;
+    if (finalPaymentMethod === 'pay_on_bus') {
+      const qrCode = await qrService.generateQRCode({
+        booking_reference,
+        passenger_name,
+        seat_number,
+        journey_date: schedule.journey_date,
+        origin: schedule.origin,
+        destination: schedule.destination
+      });
 
-    // Update booking with QR code
-    await bookingModel.updateBooking(booking.booking_id, {
-      qr_code: qrCode.qr_code_base64
-    });
+      qrBase64 = qrCode.qr_code_base64;
 
-    // Decrease available seats
+      await bookingModel.updateBooking(booking.booking_id, {
+        qr_code: qrBase64
+      });
+    }
+
+    // reserve seat immediately (both methods)
     await scheduleModel.updateAvailableSeats(schedule_id, 1);
 
-    // Get complete booking details
     const completeBooking = await bookingModel.getBookingById(booking.booking_id);
 
-    // Send booking confirmation email
-    try {
-      await emailService.sendBookingConfirmation({
-        passenger_email: completeBooking.passenger_email,
-        passenger_name: completeBooking.passenger_name,
-        booking_reference: completeBooking.booking_reference,
-        journey_date: completeBooking.journey_date,
-        departure_time: completeBooking.departure_time,
-        arrival_time: completeBooking.arrival_time,
-        origin: completeBooking.origin,
-        destination: completeBooking.destination,
-        seat_number: completeBooking.seat_number,
-        bus_number: completeBooking.bus_number,
-        bus_type: completeBooking.bus_type,
-        total_amount: completeBooking.total_amount,
-        qr_code_base64: qrCode.qr_code_base64
-      });
-      console.log('✅ Booking confirmation email sent');
-    } catch (emailError) {
-      console.log('⚠️ Email not sent:', emailError.message);
+    // Send email immediately only for pay_on_bus.
+    // For card_payhere, email is sent after payment notify success.
+    if (finalPaymentMethod === 'pay_on_bus') {
+      try {
+        await emailService.sendBookingConfirmation({
+          passenger_email: completeBooking.passenger_email,
+          passenger_name: completeBooking.passenger_name,
+          booking_reference: completeBooking.booking_reference,
+          journey_date: completeBooking.journey_date || completeBooking.schedule_journey_date,
+          departure_time: completeBooking.departure_time,
+          arrival_time: completeBooking.arrival_time,
+          origin: completeBooking.origin,
+          destination: completeBooking.destination,
+          seat_number: completeBooking.seat_number,
+          bus_number: completeBooking.bus_number,
+          bus_type: completeBooking.bus_type,
+          total_amount: completeBooking.total_amount,
+          qr_code_base64: qrBase64
+        });
+        console.log('✅ Booking confirmation email sent');
+      } catch (emailError) {
+        console.log('⚠️ Email not sent:', emailError.message);
+      }
     }
 
     res.status(201).json({
       success: true,
-      message: 'Booking created successfully. Pay on the bus.',
-      data: { 
+      message:
+        finalPaymentMethod === 'card_payhere'
+          ? 'Booking created. Proceed to card payment.'
+          : 'Booking created successfully. Pay on the bus.',
+      data: {
         booking: completeBooking,
-        qr_code: qrCode.qr_code_base64
+        qr_code: qrBase64
       }
     });
   } catch (error) {
@@ -238,7 +252,6 @@ const cancelBooking = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Get booking
     const booking = await bookingModel.getBookingById(id);
     if (!booking) {
       return res.status(404).json({
@@ -247,7 +260,6 @@ const cancelBooking = async (req, res) => {
       });
     }
 
-    // Check if user owns the booking (unless admin)
     if (req.user.role !== 'admin' && booking.user_id !== req.user.user_id) {
       return res.status(403).json({
         success: false,
@@ -255,7 +267,6 @@ const cancelBooking = async (req, res) => {
       });
     }
 
-    // Check if booking can be cancelled
     if (booking.payment_status === 'refunded') {
       return res.status(400).json({
         success: false,
@@ -270,8 +281,13 @@ const cancelBooking = async (req, res) => {
       });
     }
 
-    // Cancel booking
-    const cancelled = await bookingModel.cancelBooking(id);
+    // If your model doesn't have cancelBooking, use updateBooking fallback
+    let cancelled = false;
+    if (typeof bookingModel.cancelBooking === 'function') {
+      cancelled = await bookingModel.cancelBooking(id);
+    } else {
+      cancelled = await bookingModel.updateBooking(id, { payment_status: 'refunded' });
+    }
 
     if (!cancelled) {
       return res.status(400).json({
@@ -280,7 +296,6 @@ const cancelBooking = async (req, res) => {
       });
     }
 
-    // Increase available seats back
     await scheduleModel.updateAvailableSeats(booking.schedule_id, -1);
 
     res.json({

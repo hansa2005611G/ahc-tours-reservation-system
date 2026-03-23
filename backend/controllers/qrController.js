@@ -1,5 +1,6 @@
 const bookingModel = require('../models/bookingModel');
 const scheduleModel = require('../models/scheduleModel');
+const db = require('../config/database');
 
 // @desc    Verify QR code and get booking details
 // @route   POST /api/qr/verify
@@ -15,7 +16,6 @@ const verifyQRCode = async (req, res) => {
       });
     }
 
-    // Parse QR data
     let qrInfo;
     try {
       qrInfo = JSON.parse(qr_data);
@@ -35,8 +35,7 @@ const verifyQRCode = async (req, res) => {
       });
     }
 
-    // Get booking by reference
-    const [bookings] = await bookingModel.db.query(
+    const [bookings] = await db.query(
       `SELECT 
         b.*,
         s.journey_date, s.departure_time, s.arrival_time,
@@ -59,7 +58,6 @@ const verifyQRCode = async (req, res) => {
 
     const booking = bookings[0];
 
-    // Check if already used
     if (booking.verification_status === 'used') {
       return res.status(400).json({
         success: false,
@@ -68,7 +66,6 @@ const verifyQRCode = async (req, res) => {
       });
     }
 
-    // Check if cancelled
     if (booking.payment_status === 'refunded') {
       return res.status(400).json({
         success: false,
@@ -77,7 +74,6 @@ const verifyQRCode = async (req, res) => {
       });
     }
 
-    // Check if journey date is today
     const journeyDate = new Date(booking.journey_date);
     const today = new Date();
     journeyDate.setHours(0, 0, 0, 0);
@@ -96,7 +92,6 @@ const verifyQRCode = async (req, res) => {
       message: 'Valid ticket',
       data: { booking }
     });
-
   } catch (error) {
     console.error('QR verify error:', error);
     res.status(500).json({
@@ -122,25 +117,32 @@ const markTicketAsUsed = async (req, res) => {
       });
     }
 
-    // Update booking verification status
+    // Mark as used
     await bookingModel.updateBooking(booking_id, {
       verification_status: 'used',
       verified_by: conductor_id,
       verified_at: new Date()
     });
 
-    // If payment received on bus, update payment status
+    // If payment was collected on bus, mark payment completed
     if (payment_received) {
       await bookingModel.updateBooking(booking_id, {
-        payment_status: 'completed'
+        payment_status: 'completed',
+        paid_at: new Date()
       });
     }
+
+    // Log verification (without created_at if table doesn't have it)
+    await db.query(
+      `INSERT INTO qr_verification_logs (booking_id, conductor_id, verification_status)
+       VALUES (?, ?, ?)`,
+      [booking_id, conductor_id, 'valid']
+    );
 
     res.json({
       success: true,
       message: 'Ticket marked as used successfully'
     });
-
   } catch (error) {
     console.error('Mark ticket error:', error);
     res.status(500).json({
@@ -179,7 +181,6 @@ const getTodaySchedules = async (req, res) => {
       count: schedules.length,
       data: { schedules }
     });
-
   } catch (error) {
     console.error('Get today schedules error:', error);
     res.status(500).json({
@@ -197,7 +198,7 @@ const getScheduleBookings = async (req, res) => {
   try {
     const { schedule_id } = req.params;
 
-    const [bookings] = await bookingModel.db.query(
+    const [bookings] = await db.query(
       `SELECT 
         b.*,
         s.journey_date, s.departure_time, s.arrival_time,
@@ -216,7 +217,6 @@ const getScheduleBookings = async (req, res) => {
       count: bookings.length,
       data: { bookings }
     });
-
   } catch (error) {
     console.error('Get schedule bookings error:', error);
     res.status(500).json({

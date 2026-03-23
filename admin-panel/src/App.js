@@ -13,6 +13,7 @@ import Schedules from './pages/Schedules';
 import Bookings from './pages/Bookings';
 import Payments from './pages/Payments';
 import Users from './pages/Users';
+import Reports from './pages/Reports';
 import DashboardLayout from './layouts/DashboardLayout';
 import Cancellations from './pages/Cancellations';
 import ScheduleTemplates from './pages/ScheduleTemplates';
@@ -135,6 +136,9 @@ function App() {
               
               {/* User Management */}
               <Route path="users" element={<Users />} />
+
+              {/* Reports */}
+              <Route path="reports" element={<Reports />} />
             </Route>
 
             {/* 404 - Catch all route */}

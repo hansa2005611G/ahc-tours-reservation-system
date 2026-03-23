@@ -5,6 +5,7 @@ import './Home.css';
 
 const Home = () => {
   const navigate = useNavigate();
+
   const [searchData, setSearchData] = useState({
     origin: '',
     destination: '',
@@ -18,32 +19,45 @@ const Home = () => {
     { from: 'Colombo', to: 'Trincomalee', price: 800 }
   ];
 
+  const today = new Date().toISOString().split('T')[0];
+
   const handleChange = (e) => {
-    setSearchData({
-      ...searchData,
-      [e.target.name]: e.target.value
-    });
+    const { name, value } = e.target;
+    setSearchData((prev) => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
   const handleSearch = (e) => {
     e.preventDefault();
-    if (searchData.origin && searchData.destination && searchData.journey_date) {
-      navigate('/search', { state: searchData });
-    }
+
+    const { origin, destination, journey_date } = searchData;
+    if (!origin || !destination || !journey_date) return;
+
+    navigate('/search', { state: searchData });
   };
 
   const handlePopularRoute = (route) => {
-    const today = new Date().toISOString().split('T')[0];
     setSearchData({
       origin: route.from,
       destination: route.to,
       journey_date: today
     });
+
+    navigate('/search', {
+      state: {
+        origin: route.from,
+        destination: route.to,
+        journey_date: today
+      }
+    });
   };
 
   return (
     <div className="home-page">
-        <Navbar />
+      <Navbar />
+
       {/* Hero Section */}
       <section className="hero-section">
         <div className="hero-overlay">
@@ -51,46 +65,51 @@ const Home = () => {
             <h1 className="hero-title">🚌 AHC Tours</h1>
             <p className="hero-subtitle">Your Journey, Our Priority</p>
             <p className="hero-description">
-              Book your bus tickets online - Easy, Fast & Reliable
+              Book your bus tickets online - Easy, Fast &amp; Reliable
             </p>
 
             {/* Search Form */}
             <div className="search-card">
               <h2>Find Your Bus</h2>
-              <form onSubmit={handleSearch} className="search-form">
+              <form className="search-form" onSubmit={handleSearch}>
                 <div className="form-row">
                   <div className="form-group">
-                    <label>From</label>
+                    <label htmlFor="origin">From</label>
                     <input
+                      id="origin"
                       type="text"
                       name="origin"
                       value={searchData.origin}
                       onChange={handleChange}
                       placeholder="Origin City"
+                      autoComplete="off"
                       required
                     />
                   </div>
 
                   <div className="form-group">
-                    <label>To</label>
+                    <label htmlFor="destination">To</label>
                     <input
+                      id="destination"
                       type="text"
                       name="destination"
                       value={searchData.destination}
                       onChange={handleChange}
                       placeholder="Destination City"
+                      autoComplete="off"
                       required
                     />
                   </div>
 
                   <div className="form-group">
-                    <label>Journey Date</label>
+                    <label htmlFor="journey_date">Journey Date</label>
                     <input
+                      id="journey_date"
                       type="date"
                       name="journey_date"
                       value={searchData.journey_date}
                       onChange={handleChange}
-                      min={new Date().toISOString().split('T')[0]}
+                      min={today}
                       required
                     />
                   </div>
@@ -112,9 +131,16 @@ const Home = () => {
           <div className="routes-grid">
             {popularRoutes.map((route, index) => (
               <div
-                key={index}
+                key={`${route.from}-${route.to}-${index}`}
                 className="route-card"
                 onClick={() => handlePopularRoute(route)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    handlePopularRoute(route);
+                  }
+                }}
               >
                 <div className="route-info">
                   <h3>{route.from}</h3>
@@ -138,16 +164,19 @@ const Home = () => {
               <h3>Easy Booking</h3>
               <p>Book your tickets in just a few clicks</p>
             </div>
+
             <div className="feature-card">
               <div className="feature-icon">💳</div>
               <h3>Secure Payment</h3>
               <p>100% secure payment gateway</p>
             </div>
+
             <div className="feature-card">
               <div className="feature-icon">📱</div>
               <h3>E-Ticket</h3>
               <p>Get instant e-ticket with QR code</p>
             </div>
+
             <div className="feature-card">
               <div className="feature-icon">⏰</div>
               <h3>24/7 Support</h3>

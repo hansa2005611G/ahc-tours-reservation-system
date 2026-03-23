@@ -104,7 +104,7 @@ const MyBookings = () => {
       journeyDate.setHours(0, 0, 0, 0);
 
       if (filter === 'upcoming') {
-        return journeyDate >= today && (booking.payment_status === 'completed' || booking.payment_status === 'pay_on_bus');
+        return journeyDate >= today && (booking.payment_status === 'completed' || booking.payment_method === 'pay_on_bus' && booking.payment_status === 'pending');
       } else if (filter === 'past') {
         return journeyDate < today || booking.verification_status === 'used';
       }
@@ -116,7 +116,7 @@ const MyBookings = () => {
     if (booking.payment_status === 'refunded') {
       return <span className="status-badge cancelled">Cancelled</span>;
     }
-    if (booking.payment_status === 'pay_on_bus') {
+    if (booking.payment_method === 'pay_on_bus' && booking.payment_status === 'pending') {
       return <span className="status-badge pay-on-bus">Pay on Bus</span>;
     }
     if (booking.payment_status === 'pending') {
@@ -147,7 +147,7 @@ const MyBookings = () => {
     today.setHours(0, 0, 0, 0);
 
     return (
-      (booking.payment_status === 'completed' || booking.payment_status === 'pay_on_bus') &&
+      (booking.payment_status === 'completed' || (booking.payment_method === 'pay_on_bus' && booking.payment_status === 'pending')) &&
       booking.verification_status !== 'used' &&
       journeyDate >= today
     );
@@ -283,7 +283,7 @@ const MyBookings = () => {
                 </div>
 
                 <div className="booking-actions">
-                  {(booking.payment_status === 'completed' || booking.payment_status === 'pay_on_bus') && (
+                  {(booking.payment_status === 'completed' || (booking.payment_method === 'pay_on_bus' && booking.payment_status === 'pending')) && (
                     <button
                       onClick={() => handleViewTicket(booking)}
                       className="action-btn view-btn"

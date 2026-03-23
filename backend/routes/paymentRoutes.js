@@ -1,38 +1,22 @@
-// const express = require('express');
-// const router = express.Router();
-// const paymentController = require('../controllers/paymentController');
-// const { verifyToken } = require('../middleware/authMiddleware');
-// const { isAdmin } = require('../middleware/roleMiddleware');
-
-// // Public route (PayHere callback)
-// router.post('/notify', paymentController.handlePaymentNotification);
-
-// // Protected routes
-// router.post('/initiate', verifyToken, paymentController.initiatePayment);
-
-// // Admin only
-// router.post('/verify/:bookingId', verifyToken, isAdmin, paymentController.verifyPaymentManually);
-// router.get('/', verifyToken, isAdmin, paymentController.getAllPayments);
-
-// module.exports = router;
-
-
 const express = require('express');
 const router = express.Router();
 const paymentController = require('../controllers/paymentController');
 const { verifyToken } = require('../middleware/authMiddleware');
 const { isAdmin } = require('../middleware/roleMiddleware');
 
-// Public route (PayHere callback)
+// Public route (PayHere server-to-server callback)
 router.post('/notify', paymentController.handlePaymentNotification);
 
 // Protected routes
 router.post('/initiate', verifyToken, paymentController.initiatePayment);
 
-// Manual verification - Remove admin auth for testing
-router.post('/verify/:bookingId', paymentController.verifyPaymentManually); // ← Changed (removed auth)
+// Return/cancel landing (frontend can call this to show message)
+router.get('/status/:bookingRef', verifyToken, paymentController.getPaymentStatusByBookingRef);
 
-// Admin only
+// Manual verification (ADMIN ONLY) - secure this in real system
+router.post('/verify/:bookingId', verifyToken, isAdmin, paymentController.verifyPaymentManually);
+
+// Admin list
 router.get('/', verifyToken, isAdmin, paymentController.getAllPayments);
 
 module.exports = router;

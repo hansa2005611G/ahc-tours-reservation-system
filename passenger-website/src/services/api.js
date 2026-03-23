@@ -47,8 +47,9 @@ export const bookingAPI = {
 
 // Payment APIs
 export const paymentAPI = {
-  initiate: (bookingId) => api.post('/payments/initiate', { booking_id: bookingId }),
-  verifyManually: (bookingId) => api.post(`/payments/verify/${bookingId}`)
+  initiate: (booking_id) => api.post('/payments/initiate', { booking_id }),
+  verifyManually: (bookingId) => api.post(`/payments/verify/${bookingId}`),
+  getStatus: (bookingRef) => api.get(`/payments/status/${bookingRef}`)
 };
 
 // Cancellation APIs

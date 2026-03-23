@@ -7,7 +7,13 @@ import './PaymentSuccess.css';
 const PaymentSuccess = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { bookings: initialBookings, orderId } = location.state || {};
+
+  const {
+    bookings: initialBookings,
+    orderId,
+    paymentMethod, // 'payhere' | 'pay_on_bus'
+    message
+  } = location.state || {};
 
   const [bookings, setBookings] = useState(initialBookings || []);
   const [loading, setLoading] = useState(true);
@@ -18,21 +24,21 @@ const PaymentSuccess = () => {
       return;
     }
 
-    // Fetch updated booking details to get QR codes
     fetchUpdatedBookings();
-  }, [initialBookings, navigate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const fetchUpdatedBookings = async () => {
     try {
       setLoading(true);
       const updatedBookings = await Promise.all(
-        initialBookings.map(booking =>
-          bookingAPI.getById(booking.booking_id)
-        )
+        initialBookings.map((booking) => bookingAPI.getById(booking.booking_id))
       );
-      setBookings(updatedBookings.map(res => res.data.data.booking));
+      setBookings(updatedBookings.map((res) => res.data.data.booking));
     } catch (error) {
       console.error('Error fetching updated bookings:', error);
+      // fallback: keep initial bookings
+      setBookings(initialBookings || []);
     } finally {
       setLoading(false);
     }
@@ -43,7 +49,6 @@ const PaymentSuccess = () => {
   };
 
   const handleDownload = (booking) => {
-    // Create a download link for the QR code
     if (booking.qr_code) {
       const link = document.createElement('a');
       link.href = booking.qr_code;
@@ -53,10 +58,21 @@ const PaymentSuccess = () => {
   };
 
   const formatTime = (time) => {
+    if (!time) return '-';
     return new Date(`2000-01-01T${time}`).toLocaleTimeString('en-US', {
       hour: 'numeric',
       minute: '2-digit',
       hour12: true
+    });
+  };
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '-';
+    return new Date(dateStr).toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
     });
   };
 
@@ -66,28 +82,34 @@ const PaymentSuccess = () => {
         <Navbar />
         <div className="loading-container">
           <div className="spinner"></div>
-          <p>Generating your e-tickets...</p>
+          <p>Preparing your booking details...</p>
         </div>
       </div>
     );
   }
 
-  if (bookings.length === 0) {
-    return null;
-  }
+  if (!bookings || bookings.length === 0) return null;
 
-  const firstBooking = bookings[0];
+  const isPayOnBus = paymentMethod === 'pay_on_bus';
+  const headerTitle = isPayOnBus ? 'Booking Confirmed!' : 'Payment Successful!';
+  const headerMessage =
+    message ||
+    (isPayOnBus
+      ? 'Your booking is confirmed. Please pay the fare to the conductor when boarding.'
+      : 'Your booking has been confirmed. E-tickets have been sent to your email.');
+
+  const totalAmount = bookings.reduce((sum, b) => sum + parseFloat(b.total_amount || 0), 0);
 
   return (
     <div className="payment-success-page">
       <Navbar />
 
       <div className="container">
-        {/* Success Header */}
+        {/* Header */}
         <div className="success-header">
           <div className="success-icon">✓</div>
-          <h1>Payment Successful!</h1>
-          <p>Your booking has been confirmed. E-tickets have been sent to your email.</p>
+          <h1>{headerTitle}</h1>
+          <p>{headerMessage}</p>
         </div>
 
         {/* Action Buttons */}
@@ -100,9 +122,9 @@ const PaymentSuccess = () => {
           </Link>
         </div>
 
-        {/* E-Tickets */}
+        {/* Tickets */}
         <div className="tickets-container">
-          {bookings.map((booking, index) => (
+          {bookings.map((booking) => (
             <div key={booking.booking_id} className="ticket-card">
               <div className="ticket-header">
                 <div className="ticket-logo">
@@ -116,7 +138,7 @@ const PaymentSuccess = () => {
               </div>
 
               <div className="ticket-body">
-                {/* Journey Details */}
+                {/* Journey */}
                 <div className="journey-section">
                   <h3>Journey Details</h3>
                   <div className="journey-route">
@@ -130,25 +152,21 @@ const PaymentSuccess = () => {
                       <span className="city-time">{formatTime(booking.arrival_time)}</span>
                     </div>
                   </div>
+
                   <div className="journey-info-grid">
                     <div className="info-item">
                       <span className="info-label">Date</span>
                       <span className="info-value">
-                        {new Date(booking.journey_date).toLocaleDateString('en-US', {
-                          weekday: 'long',
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric'
-                        })}
+                        {formatDate(booking.journey_date || booking.schedule_journey_date)}
                       </span>
                     </div>
                     <div className="info-item">
                       <span className="info-label">Bus Number</span>
-                      <span className="info-value">{booking.bus_number}</span>
+                      <span className="info-value">{booking.bus_number || '-'}</span>
                     </div>
                     <div className="info-item">
                       <span className="info-label">Bus Type</span>
-                      <span className="info-value">{booking.bus_type}</span>
+                      <span className="info-value">{booking.bus_type || '-'}</span>
                     </div>
                     <div className="info-item">
                       <span className="info-label">Seat Number</span>
@@ -157,7 +175,7 @@ const PaymentSuccess = () => {
                   </div>
                 </div>
 
-                {/* Passenger Details */}
+                {/* Passenger */}
                 <div className="passenger-section">
                   <h3>Passenger Details</h3>
                   <div className="passenger-info">
@@ -180,16 +198,12 @@ const PaymentSuccess = () => {
                   </div>
                 </div>
 
-                {/* QR Code Section */}
-                {booking.qr_code && (
+                {/* QR */}
+                {booking.qr_code ? (
                   <div className="qr-section">
                     <h3>Boarding Pass</h3>
                     <div className="qr-container">
-                      <img
-                        src={booking.qr_code}
-                        alt="Boarding QR Code"
-                        className="qr-code"
-                      />
+                      <img src={booking.qr_code} alt="Boarding QR Code" className="qr-code" />
                       <p className="qr-instruction">
                         Show this QR code to the conductor when boarding
                       </p>
@@ -201,6 +215,13 @@ const PaymentSuccess = () => {
                       💾 Download QR Code
                     </button>
                   </div>
+                ) : (
+                  <div className="qr-section">
+                    <h3>Boarding Pass</h3>
+                    <p className="qr-instruction">
+                      QR is being prepared. Please check “My Bookings” in a moment.
+                    </p>
+                  </div>
                 )}
               </div>
 
@@ -211,7 +232,12 @@ const PaymentSuccess = () => {
                     <li>Please arrive at the bus station 15 minutes before departure</li>
                     <li>Carry a valid photo ID for verification</li>
                     <li>This ticket is non-transferable</li>
-                    <li>Booking Status: <strong>{booking.payment_status}</strong></li>
+                    <li>
+                      Payment Method: <strong>{booking.payment_method || (isPayOnBus ? 'pay_on_bus' : 'card_payhere')}</strong>
+                    </li>
+                    <li>
+                      Booking Status: <strong>{booking.payment_status}</strong>
+                    </li>
                   </ul>
                 </div>
               </div>
@@ -228,10 +254,8 @@ const PaymentSuccess = () => {
               <span>{bookings.length}</span>
             </div>
             <div className="summary-row">
-              <span>Total Amount Paid:</span>
-              <span className="total-amount">
-                LKR {bookings.reduce((sum, b) => sum + parseFloat(b.total_amount), 0).toLocaleString()}
-              </span>
+              <span>{isPayOnBus ? 'Total Payable on Bus:' : 'Total Amount:'}</span>
+              <span className="total-amount">LKR {totalAmount.toLocaleString()}</span>
             </div>
             {orderId && (
               <div className="summary-row">
