@@ -117,4 +117,13 @@ export const paymentAPI = {
   verifyManually: (bookingId) => api.post(`/payments/verify/${bookingId}`)
 };
 
+
+export const userAPI = {
+  getUsers: (params) => api.get('/auth/users', { params }),
+  createUser: (payload) => api.post('/auth/users', payload),
+  updateUser: (id, payload) => api.put(`/auth/users/${id}`, payload),
+  deleteUser: (id) => api.delete(`/auth/users/${id}`), // <-- comma was missing
+  toggleStatus: (id, is_active) => api.patch(`/auth/users/${id}/status`, { is_active })
+};
+
 export default api;

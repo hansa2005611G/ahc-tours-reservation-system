@@ -15,6 +15,13 @@ router.post('/login', validateLogin, authController.login);
 router.get('/profile', verifyToken, authController.getProfile);
 router.put('/profile', verifyToken, authController.updateProfile);
 
+// Admin user management
+router.get('/users', verifyToken, authController.getAllUsers);
+router.post('/users', verifyToken, authController.createUserByAdmin);
+router.put('/users/:id', verifyToken, authController.updateUserByAdmin);
+router.delete('/users/:id', verifyToken, authController.deleteUserByAdmin);
+router.patch('/users/:id/status', verifyToken, authController.toggleUserStatus);
+
 // Login
 router.post('/login', async (req, res) => {
   try {
