@@ -1,93 +1,282 @@
 .reports-page {
   padding: 24px;
-  background: #f5f7fb;
-  min-height: calc(100vh - 64px);
+  background: #f5f7fa;
+  min-height: 100vh;
 }
 
+/* ========== HEADER ========== */
 .reports-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: end;
-  gap: 12px;
-  margin-bottom: 14px;
+  margin-bottom: 32px;
 }
 
-.reports-header h1 {
-  margin: 0;
-  font-size: 30px;
+.header-title {
+  margin-bottom: 24px;
 }
 
-.reports-header p {
-  margin: 6px 0 0;
+.header-title h1 {
+  font-size: 32px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 8px 0;
+}
+
+.header-title p {
+  font-size: 14px;
   color: #6b7280;
+  margin: 0;
 }
 
-.filters {
+.header-controls {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.filter-section {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 16px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.date-inputs {
   display: flex;
   gap: 8px;
+  align-items: center;
 }
 
-.filters input,
-.filters button {
-  height: 40px;
-  border-radius: 10px;
-  border: 1px solid #d1d5db;
-  padding: 0 12px;
-}
-
-.filters button {
-  border: none;
-  color: #fff;
-  font-weight: 700;
-  background: linear-gradient(135deg, #5b6eea, #764ba2);
+.date-inputs input {
+  padding: 8px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 14px;
   cursor: pointer;
 }
 
-.error-box {
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  color: #b91c1c;
-  padding: 10px 12px;
-  border-radius: 10px;
-  margin-bottom: 14px;
+.date-inputs input:focus {
+  outline: none;
+  border-color: #5b6eea;
+  box-shadow: 0 0 0 3px rgba(91, 110, 234, 0.1);
 }
 
+.date-inputs span {
+  color: #9ca3af;
+  font-size: 12px;
+}
+
+.quick-filters {
+  display: flex;
+  gap: 6px;
+}
+
+.quick-filter-btn {
+  padding: 6px 12px;
+  border: 1px solid #e5e7eb;
+  background: white;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: #6b7280;
+}
+
+.quick-filter-btn:hover {
+  border-color: #5b6eea;
+  color: #5b6eea;
+  background: #f0f4ff;
+}
+
+.apply-btn {
+  padding: 8px 16px;
+  background: #5b6eea;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 14px;
+}
+
+.apply-btn:hover:not(:disabled) {
+  background: #4c5dd9;
+  box-shadow: 0 4px 12px rgba(91, 110, 234, 0.3);
+}
+
+.apply-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ========== EXPORT SECTION ========== */
+.export-section {
+  margin-bottom: 24px;
+  background: white;
+  padding: 16px;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.export-row h3 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.export-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.export-btn {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.excel-btn {
+  background: #10b981;
+  color: white;
+}
+
+.excel-btn:hover {
+  background: #059669;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.pdf-btn {
+  background: #ef4444;
+  color: white;
+}
+
+.pdf-btn:hover {
+  background: #dc2626;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.csv-btn {
+  background: #3b82f6;
+  color: white;
+}
+
+.csv-btn:hover {
+  background: #2563eb;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+/* ========== ERROR BOX ========== */
+.error-box {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: #fee2e2;
+  border-left: 4px solid #ef4444;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  color: #991b1b;
+  font-size: 14px;
+}
+
+.error-box button {
+  background: none;
+  border: none;
+  color: #991b1b;
+  cursor: pointer;
+  font-size: 18px;
+}
+
+/* ========== KPI GRID ========== */
 .kpi-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(180px, 1fr));
-  gap: 12px;
-  margin-bottom: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  margin-bottom: 32px;
 }
 
 .kpi-card {
-  background: #fff;
-  border: 1px solid #eef2f7;
-  border-radius: 14px;
-  padding: 14px;
-  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+  padding: 20px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border-left: 4px solid #5b6eea;
+  transition: all 0.3s;
+}
+
+.kpi-card:hover {
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.kpi-card.primary {
+  border-left-color: #5b6eea;
+  background: linear-gradient(135deg, rgba(91, 110, 234, 0.05) 0%, rgba(124, 77, 255, 0.05) 100%);
+}
+
+.kpi-card.success {
+  border-left-color: #22c55e;
+}
+
+.kpi-card.warning {
+  border-left-color: #f59e0b;
+}
+
+.kpi-card.info {
+  border-left-color: #06b6d4;
 }
 
 .kpi-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
   color: #6b7280;
-  font-size: 13px;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .kpi-card h3 {
-  margin: 8px 0 0;
-  font-size: 24px;
+  font-size: 28px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 8px 0;
 }
 
+.kpi-card small {
+  display: block;
+  font-size: 12px;
+  color: #9ca3af;
+  margin-top: 4px;
+}
+
+/* ========== CHARTS GRID ========== */
 .charts-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px;
+  gap: 24px;
 }
 
 .panel {
-  background: #fff;
-  border: 1px solid #eef2f7;
-  border-radius: 14px;
-  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  transition: all 0.3s;
+}
+
+.panel:hover {
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
 }
 
 .panel-full {
@@ -95,61 +284,134 @@
 }
 
 .panel-head {
-  padding: 12px 14px;
-  border-bottom: 1px solid #eef2f7;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background: linear-gradient(135deg, #f5f7fa 0%, #f0f4ff 100%);
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .panel-head h2 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1f2937;
   margin: 0;
-  font-size: 18px;
+}
+
+.panel-export-btn {
+  padding: 6px 12px;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.panel-export-btn:hover {
+  background: #2563eb;
+}
+
+.sort-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.sort-controls label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.sort-controls select {
+  padding: 4px 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
 }
 
 .chart-box {
-  padding: 10px 10px 2px;
-}
-
-.export-row {
+  padding: 20px;
+  min-height: 320px;
   display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-bottom: 12px;
+  align-items: center;
+  justify-content: center;
 }
 
-.export-row button {
-  height: 38px;
-  border: none;
-  border-radius: 10px;
-  padding: 0 12px;
-  color: #fff;
-  font-weight: 600;
-  cursor: pointer;
-  background: linear-gradient(135deg, #374151, #111827);
+.no-data {
+  text-align: center;
+  color: #9ca3af;
+  font-size: 14px;
+  width: 100%;
 }
 
+/* ========== RESPONSIVE ========== */
 @media (max-width: 1024px) {
   .kpi-grid {
-    grid-template-columns: repeat(2, minmax(180px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   }
-  .charts-grid {
-    grid-template-columns: 1fr;
+
+  .filter-section {
+    flex-direction: column;
+    align-items: stretch;
   }
-  .panel-full {
-    grid-column: auto;
+
+  .date-inputs,
+  .quick-filters {
+    width: 100%;
+  }
+
+  .apply-btn {
+    width: 100%;
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
   .reports-page {
     padding: 12px;
   }
+
+  .header-title h1 {
+    font-size: 24px;
+  }
+
   .kpi-grid {
     grid-template-columns: 1fr;
   }
-  .filters {
+
+  .kpi-card h3 {
+    font-size: 20px;
+  }
+
+  .export-buttons {
     flex-wrap: wrap;
   }
-  .filters input,
-  .filters button {
+
+  .export-btn {
+    flex: 1;
+    min-width: 80px;
+  }
+
+  .panel-head {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .panel-head h2 {
     width: 100%;
+  }
+
+  .sort-controls {
+    width: 100%;
+  }
+
+  .chart-box {
+    min-height: 250px;
   }
 }

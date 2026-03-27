@@ -19,24 +19,13 @@ import Cancellations from './pages/Cancellations';
 import ScheduleTemplates from './pages/ScheduleTemplates';
 import BusStatusManagement from './pages/BusStatusManagement';
 
-// Custom Theme
 const theme = createTheme({
   palette: {
-    primary: {
-      main: '#1976d2'
-    },
-    secondary: {
-      main: '#dc004e'
-    },
-    success: {
-      main: '#2e7d32'
-    },
-    warning: {
-      main: '#ed6c02'
-    },
-    error: {
-      main: '#d32f2f'
-    }
+    primary: { main: '#1976d2' },
+    secondary: { main: '#dc004e' },
+    success: { main: '#2e7d32' },
+    warning: { main: '#ed6c02' },
+    error: { main: '#d32f2f' }
   },
   typography: {
     fontFamily: [
@@ -51,24 +40,15 @@ const theme = createTheme({
   },
   components: {
     MuiButton: {
-      styleOverrides: {
-        root: {
-          textTransform: 'none',
-          borderRadius: 8
-        }
-      }
+      styleOverrides: { root: { textTransform: 'none', borderRadius: 8 } }
     },
     MuiCard: {
-      styleOverrides: {
-        root: {
-          borderRadius: 12
-        }
-      }
+      styleOverrides: { root: { borderRadius: 12 } }
     }
   }
 });
 
-// Protected Route Component
+// Protected Route Component - now inside AppRoutes where AuthProvider exists
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
 
@@ -88,62 +68,49 @@ const ProtectedRoute = ({ children }) => {
   return isAuthenticated ? children : <Navigate to="/login" replace />;
 };
 
+// NEW: Separate component for routes that's INSIDE AuthProvider
+const AppRoutes = () => {
+  return (
+    <Routes>
+      {/* Public Route */}
+      <Route path="/login" element={<Login />} />
+      
+      {/* Protected Routes */}
+      <Route
+        path="/"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<Navigate to="/dashboard" replace />} />
+        <Route path="dashboard" element={<Dashboard />} />
+        <Route path="buses" element={<Buses />} />
+        <Route path="routes" element={<RouteManagement />} />
+        <Route path="schedule-templates" element={<ScheduleTemplates />} />
+        <Route path="bus-status" element={<BusStatusManagement />} />
+        <Route path="schedules" element={<Schedules />} />
+        <Route path="bookings" element={<Bookings />} />
+        <Route path="payments" element={<Payments />} />
+        <Route path="cancellations" element={<Cancellations />} />
+        <Route path="users" element={<Users />} />
+        <Route path="reports" element={<Reports />} />
+      </Route>
+
+      {/* 404 - Catch all route */}
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+    </Routes>
+  );
+};
+
 function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <AuthProvider>
         <Router>
-          <Routes>
-            {/* Public Route */}
-            <Route path="/login" element={<Login />} />
-            
-            {/* Protected Routes */}
-            <Route
-              path="/"
-              element={
-                <ProtectedRoute>
-                  <DashboardLayout />
-                </ProtectedRoute>
-              }
-            >
-              {/* Redirect root to dashboard */}
-              <Route index element={<Navigate to="/dashboard" replace />} />
-              
-              {/* Dashboard */}
-              <Route path="dashboard" element={<Dashboard />} />
-              
-              {/* Bus Management */}
-              <Route path="buses" element={<Buses />} />
-              
-              {/* Route Management */}
-              <Route path="routes" element={<RouteManagement />} />
-              
-              {/* Schedule Templates */}
-              <Route path="schedule-templates" element={<ScheduleTemplates />} />
-              {/* Bus Status Management */}
-              <Route path="bus-status" element={<BusStatusManagement />} />
-              {/* Schedule Management */}
-              <Route path="schedules" element={<Schedules />} />
-              
-              {/* Booking Management */}
-              <Route path="bookings" element={<Bookings />} />
-              
-              {/* Payment Management */}
-              <Route path="payments" element={<Payments />} />
-
-              <Route path="cancellations" element={<Cancellations />} />
-              
-              {/* User Management */}
-              <Route path="users" element={<Users />} />
-
-              {/* Reports */}
-              <Route path="reports" element={<Reports />} />
-            </Route>
-
-            {/* 404 - Catch all route */}
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
-          </Routes>
+          <AppRoutes />  {/* ← Now AppRoutes is INSIDE AuthProvider */}
         </Router>
       </AuthProvider>
     </ThemeProvider>

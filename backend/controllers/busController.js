@@ -1,3 +1,4 @@
+const db = require('../config/database');
 const busModel = require('../models/busModel');
 
 // @desc    Get all buses
@@ -57,6 +58,45 @@ const getBusById = async (req, res) => {
     });
   }
 };
+
+// @desc    Get bus statistics overview
+// @route   GET /api/buses/stats/overview
+// @access  Private/Admin
+const getStats = async (req, res) => {
+  try {
+    const [[stats]] = await db.query(`
+      SELECT 
+        COUNT(*) as total_buses,
+        SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active_buses,
+        SUM(CASE WHEN status = 'inactive' THEN 1 ELSE 0 END) as inactive_buses,
+        SUM(CASE WHEN status = 'maintenance' THEN 1 ELSE 0 END) as maintenance_buses,
+        SUM(total_seats) as total_capacity
+      FROM buses
+    `);
+
+    res.json({
+      success: true,
+      data: {
+        stats: stats || {
+          total_buses: 0,
+          active_buses: 0,
+          inactive_buses: 0,
+          maintenance_buses: 0,
+          total_capacity: 0
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Bus stats error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching bus statistics',
+      error: error.message
+    });
+  }
+};
+
+
 
 // @desc    Create new bus
 // @route   POST /api/buses
@@ -374,5 +414,6 @@ module.exports = {
   getBusStats,
   updateBusStatus,
   getBusStatusHistory,
+  getStats,
   searchBuses
 };

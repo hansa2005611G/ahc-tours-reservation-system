@@ -15,10 +15,15 @@ const adminOnly = (req, res, next) => {
   next();
 };
 
+
 router.get('/overview', verifyToken, adminOnly, reportController.getOverviewReport);
 router.get('/revenue-trend', verifyToken, adminOnly, reportController.getRevenueTrendReport);
 router.get('/payment-methods', verifyToken, adminOnly, reportController.getPaymentMethodsReport);
 router.get('/routes', verifyToken, adminOnly, reportController.getRoutesReport);
+
+
 router.get('/occupancy', verifyToken, adminOnly, reportController.getOccupancyReport);
+router.get('/booking-status', verifyToken, adminOnly, reportController.getBookingStatusReport);
+router.get('/peak-hours', verifyToken, adminOnly, reportController.getPeakHoursReport);
 
 module.exports = router;

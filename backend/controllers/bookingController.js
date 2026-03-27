@@ -2,6 +2,8 @@ const bookingModel = require('../models/bookingModel');
 const scheduleModel = require('../models/scheduleModel');
 const qrService = require('../services/qrService');
 const emailService = require('../services/emailService');
+const db = require('../config/database');
+
 
 // @desc    Get all bookings
 // @route   GET /api/bookings
@@ -104,6 +106,46 @@ const getBookingByReference = async (req, res) => {
     });
   }
 };
+
+// @desc    Get booking statistics overview
+// @route   GET /api/bookings/stats/overview
+// @access  Private/Admin
+const getStats = async (req, res) => {
+  try {
+    const [[stats]] = await db.query(`
+      SELECT 
+        COUNT(*) as total_bookings,
+        SUM(CASE WHEN payment_status = 'completed' THEN 1 ELSE 0 END) as completed_bookings,
+        SUM(CASE WHEN payment_status = 'pending' THEN 1 ELSE 0 END) as pending_bookings,
+        SUM(CASE WHEN payment_status = 'failed' THEN 1 ELSE 0 END) as failed_bookings,
+        SUM(CASE WHEN payment_status = 'refunded' THEN 1 ELSE 0 END) as refunded_bookings,
+        SUM(CASE WHEN payment_status = 'completed' THEN total_amount ELSE 0 END) as total_revenue
+      FROM bookings
+    `);
+
+    res.json({
+      success: true,
+      data: {
+        stats: stats || {
+          total_bookings: 0,
+          completed_bookings: 0,
+          pending_bookings: 0,
+          failed_bookings: 0,
+          refunded_bookings: 0,
+          total_revenue: 0
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Booking stats error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching booking statistics',
+      error: error.message
+    });
+  }
+};
+
 
 // @desc    Create a new booking
 // @route   POST /api/bookings
@@ -339,5 +381,6 @@ module.exports = {
   getBookingByReference,
   createBooking,
   cancelBooking,
-  getBookingStatistics
+  getBookingStatistics,
+  getStats
 };

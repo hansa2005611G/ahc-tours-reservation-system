@@ -1,28 +1,19 @@
 const db = require('../config/database');
 
-const toDateTimeStart = (d) => `${d} 00:00:00`;
-const toDateTimeEnd = (d) => `${d} 23:59:59`;
-
+// Helper function to normalize date range
 const normalizeDateRange = (from, to) => {
-  const today = new Date().toISOString().split('T')[0];
-  const finalTo = to || today;
-
-  let finalFrom = from;
-  if (!finalFrom) {
-    const d = new Date(finalTo);
-    d.setDate(d.getDate() - 29); // last 30 days
-    finalFrom = d.toISOString().split('T')[0];
-  }
+  const fromDate = from || new Date(Date.now() - 29 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const toDate = to || new Date().toISOString().split('T')[0];
 
   return {
-    fromDate: finalFrom,
-    toDate: finalTo,
-    fromDateTime: toDateTimeStart(finalFrom),
-    toDateTime: toDateTimeEnd(finalTo)
+    fromDate,
+    toDate,
+    fromDateTime: `${fromDate} 00:00:00`,
+    toDateTime: `${toDate} 23:59:59`
   };
 };
 
-// @desc    Get reports overview
+// @desc    Get overview report
 // @route   GET /api/reports/overview
 // @access  Private/Admin
 const getOverviewReport = async (req, res) => {
@@ -32,16 +23,36 @@ const getOverviewReport = async (req, res) => {
 
     const [[overview]] = await db.query(
       `SELECT
-        COUNT(*) AS total_bookings,
-        SUM(CASE WHEN payment_status = 'completed' THEN 1 ELSE 0 END) AS completed_bookings,
-        SUM(CASE WHEN payment_status = 'pending' THEN 1 ELSE 0 END) AS pending_bookings,
-        SUM(CASE WHEN payment_status = 'failed' THEN 1 ELSE 0 END) AS failed_bookings,
-        SUM(CASE WHEN payment_status = 'refunded' THEN 1 ELSE 0 END) AS refunded_bookings,
-        SUM(CASE WHEN payment_status = 'completed' THEN total_amount ELSE 0 END) AS total_revenue,
-        AVG(CASE WHEN payment_status = 'completed' THEN total_amount ELSE NULL END) AS avg_ticket_value
-      FROM bookings
-      WHERE booking_date BETWEEN ? AND ?`,
+        COUNT(b.booking_id) AS total_bookings,
+        SUM(CASE WHEN b.payment_status = 'completed' THEN 1 ELSE 0 END) AS completed_bookings,
+        SUM(CASE WHEN b.payment_status = 'pending' THEN 1 ELSE 0 END) AS pending_bookings,
+        SUM(CASE WHEN b.payment_status = 'failed' THEN 1 ELSE 0 END) AS failed_bookings,
+        SUM(CASE WHEN b.payment_status = 'refunded' THEN 1 ELSE 0 END) AS refunded_bookings,
+        SUM(CASE WHEN b.payment_status = 'completed' THEN b.total_amount ELSE 0 END) AS total_revenue,
+        AVG(CASE WHEN b.payment_status = 'completed' THEN b.total_amount ELSE NULL END) AS avg_booking_value,
+        COUNT(DISTINCT s.route_id) AS active_routes,
+        COUNT(DISTINCT s.bus_id) AS total_buses
+      FROM bookings b
+      LEFT JOIN schedules s ON b.schedule_id = s.schedule_id
+      WHERE b.booking_date BETWEEN ? AND ?`,
       [fromDateTime, toDateTime]
+    );
+
+    // Get occupancy average
+    const [[occupancyData]] = await db.query(
+      `SELECT
+        AVG(occupancy_rate) AS avg_occupancy
+      FROM (
+        SELECT
+          ROUND((COUNT(b.booking_id) / NULLIF(bus.total_seats, 0) * 100), 2) AS occupancy_rate
+        FROM schedules s
+        JOIN buses bus ON s.bus_id = bus.bus_id
+        LEFT JOIN bookings b ON s.schedule_id = b.schedule_id 
+          AND b.payment_status IN ('completed', 'pending')
+        WHERE s.departure_time BETWEEN ? AND ?
+        GROUP BY s.schedule_id
+      ) AS occ`
+      , [fromDateTime, toDateTime]
     );
 
     const completionRate =
@@ -55,6 +66,7 @@ const getOverviewReport = async (req, res) => {
         range: { from: fromDate, to: toDate },
         overview: {
           ...overview,
+          avg_occupancy: occupancyData?.avg_occupancy || 0,
           completion_rate: Number(completionRate)
         }
       }
@@ -195,7 +207,7 @@ const getRoutesReport = async (req, res) => {
   }
 };
 
-// @desc    Get schedule occupancy report
+// @desc    Get bus occupancy rate by date - FIXED
 // @route   GET /api/reports/occupancy
 // @access  Private/Admin
 const getOccupancyReport = async (req, res) => {
@@ -205,28 +217,17 @@ const getOccupancyReport = async (req, res) => {
 
     const [rows] = await db.query(
       `SELECT
-        s.schedule_id,
-        s.journey_date,
-        s.departure_time,
-        b.bus_number,
-        b.total_seats,
-        r.route_name,
-        r.origin,
-        r.destination,
-        COUNT(bk.booking_id) AS booked_seats,
-        SUM(CASE WHEN bk.verification_status='used' THEN 1 ELSE 0 END) AS used_seats,
-        ROUND((COUNT(bk.booking_id) / NULLIF(b.total_seats,0)) * 100, 2) AS occupancy_percent
+        s.journey_date AS date,
+        COUNT(DISTINCT b.booking_id) AS booked_seats,
+        SUM(b_bus.total_seats) AS total_capacity,
+        ROUND((COUNT(DISTINCT b.booking_id) / NULLIF(SUM(b_bus.total_seats), 0) * 100), 2) AS occupancy_rate
       FROM schedules s
-      JOIN buses b ON s.bus_id = b.bus_id
-      JOIN routes r ON s.route_id = r.route_id
-      LEFT JOIN bookings bk
-        ON bk.schedule_id = s.schedule_id
-        AND bk.payment_status != 'refunded'
+      JOIN buses b_bus ON s.bus_id = b_bus.bus_id
+      LEFT JOIN bookings b ON s.schedule_id = b.schedule_id 
+        AND b.payment_status IN ('completed', 'pending')
       WHERE s.journey_date BETWEEN ? AND ?
-      GROUP BY
-        s.schedule_id, s.journey_date, s.departure_time,
-        b.bus_number, b.total_seats, r.route_name, r.origin, r.destination
-      ORDER BY s.journey_date DESC, s.departure_time ASC`,
+      GROUP BY s.journey_date
+      ORDER BY date ASC`,
       [fromDate, toDate]
     );
 
@@ -247,10 +248,119 @@ const getOccupancyReport = async (req, res) => {
   }
 };
 
+// @desc    Get booking status distribution
+// @route   GET /api/reports/booking-status
+// @access  Private/Admin
+const getBookingStatusReport = async (req, res) => {
+  try {
+    const { from, to } = req.query;
+    const { fromDate, toDate, fromDateTime, toDateTime } = normalizeDateRange(from, to);
+
+    const [rows] = await db.query(
+      `SELECT
+        payment_status AS status,
+        COUNT(*) AS count,
+        SUM(total_amount) AS revenue,
+        ROUND((COUNT(*) / (SELECT COUNT(*) FROM bookings WHERE booking_date BETWEEN ? AND ?) * 100), 2) AS percentage
+      FROM bookings
+      WHERE booking_date BETWEEN ? AND ?
+      GROUP BY payment_status
+      ORDER BY count DESC`,
+      [fromDateTime, toDateTime, fromDateTime, toDateTime]
+    );
+
+    // Map status names for better display
+    const mappedRows = rows.map(row => ({
+      status: row.status || 'unknown',
+      count: row.count,
+      revenue: row.revenue || 0,
+      percentage: row.percentage || 0
+    }));
+
+    res.json({
+      success: true,
+      data: {
+        range: { from: fromDate, to: toDate },
+        booking_status: mappedRows
+      }
+    });
+  } catch (error) {
+    console.error('Booking status report error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching booking status report',
+      error: error.message
+    });
+  }
+};
+
+// @desc    Get peak booking hours
+// @route   GET /api/reports/peak-hours
+// @access  Private/Admin
+const getPeakHoursReport = async (req, res) => {
+  try {
+    const { from, to } = req.query;
+    const { fromDate, toDate, fromDateTime, toDateTime } = normalizeDateRange(from, to);
+
+    const [rows] = await db.query(
+      `SELECT
+        HOUR(booking_date) AS hour,
+        COUNT(*) AS bookings,
+        SUM(CASE WHEN payment_status='completed' THEN total_amount ELSE 0 END) AS revenue,
+        SUM(CASE WHEN payment_status='completed' THEN 1 ELSE 0 END) AS completed_bookings
+      FROM bookings
+      WHERE booking_date BETWEEN ? AND ?
+      GROUP BY HOUR(booking_date)
+      ORDER BY hour ASC`,
+      [fromDateTime, toDateTime]
+    );
+
+    // Fill in missing hours with 0 values (0-23)
+    const hourMap = {};
+    for (let i = 0; i < 24; i++) {
+      hourMap[i] = {
+        hour: i,
+        bookings: 0,
+        revenue: 0,
+        completed_bookings: 0
+      };
+    }
+
+    rows.forEach(row => {
+      hourMap[row.hour] = {
+        hour: row.hour,
+        bookings: row.bookings || 0,
+        revenue: row.revenue || 0,
+        completed_bookings: row.completed_bookings || 0
+      };
+    });
+
+    const peakHours = Object.values(hourMap).sort((a, b) => a.hour - b.hour);
+
+    res.json({
+      success: true,
+      data: {
+        range: { from: fromDate, to: toDate },
+        peak_hours: peakHours
+      }
+    });
+  } catch (error) {
+    console.error('Peak hours report error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching peak hours report',
+      error: error.message
+    });
+  }
+};
+
+// Export all functions
 module.exports = {
   getOverviewReport,
   getRevenueTrendReport,
   getPaymentMethodsReport,
   getRoutesReport,
-  getOccupancyReport
+  getOccupancyReport,
+  getBookingStatusReport,
+  getPeakHoursReport
 };

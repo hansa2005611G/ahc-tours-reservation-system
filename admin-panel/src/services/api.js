@@ -93,21 +93,35 @@ export const bookingAPI = {
   getStats: () => api.get('/bookings/stats/overview')
 };
 
+// Report APIs - UPDATED WITH NEW ENDPOINTS
 export const reportAPI = {
+  // Overview Report
   getOverview: (from, to) =>
     api.get('/reports/overview', { params: { from, to } }),
 
+  // Revenue Trend Report
   getRevenueTrend: (from, to, group_by = 'day') =>
     api.get('/reports/revenue-trend', { params: { from, to, group_by } }),
 
+  // Payment Methods Report
   getPaymentMethods: (from, to) =>
     api.get('/reports/payment-methods', { params: { from, to } }),
 
+  // Top Routes Report
   getRoutes: (from, to) =>
     api.get('/reports/routes', { params: { from, to } }),
 
+  // NEW: Occupancy Rate Report
   getOccupancy: (from, to) =>
-    api.get('/reports/occupancy', { params: { from, to } })
+    api.get('/reports/occupancy', { params: { from, to } }),
+
+  // NEW: Booking Status Distribution
+  getBookingStatus: (from, to) =>
+    api.get('/reports/booking-status', { params: { from, to } }),
+
+  // NEW: Peak Hours Report
+  getPeakHours: (from, to) =>
+    api.get('/reports/peak-hours', { params: { from, to } })
 };
 
 // Payment APIs
@@ -117,12 +131,12 @@ export const paymentAPI = {
   verifyManually: (bookingId) => api.post(`/payments/verify/${bookingId}`)
 };
 
-
+// User APIs
 export const userAPI = {
   getUsers: (params) => api.get('/auth/users', { params }),
   createUser: (payload) => api.post('/auth/users', payload),
   updateUser: (id, payload) => api.put(`/auth/users/${id}`, payload),
-  deleteUser: (id) => api.delete(`/auth/users/${id}`), // <-- comma was missing
+  deleteUser: (id) => api.delete(`/auth/users/${id}`),
   toggleStatus: (id, is_active) => api.patch(`/auth/users/${id}/status`, { is_active })
 };
 

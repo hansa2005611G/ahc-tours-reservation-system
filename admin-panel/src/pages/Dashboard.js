@@ -10,7 +10,8 @@ import {
   CircularProgress,
   Stack,
   Button,
-  Divider
+  Divider,
+  Alert
 } from '@mui/material';
 import {
   DirectionsBus,
@@ -91,6 +92,7 @@ const Dashboard = () => {
   const [busStats, setBusStats] = useState(null);
   const [bookingStats, setBookingStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     fetchStats();
@@ -98,15 +100,30 @@ const Dashboard = () => {
 
   const fetchStats = async () => {
     try {
+      setLoading(true);
+      setError(null);
+
+      console.log('📊 Fetching dashboard stats...');
+
       const [busResponse, bookingResponse] = await Promise.all([
-        busAPI.getStats(),
-        bookingAPI.getStats()
+        busAPI.getStats().catch(e => {
+          console.error('Bus stats error:', e);
+          throw e;
+        }),
+        bookingAPI.getStats().catch(e => {
+          console.error('Booking stats error:', e);
+          throw e;
+        })
       ]);
+
+      console.log('✅ Bus stats:', busResponse?.data?.data?.stats);
+      console.log('✅ Booking stats:', bookingResponse?.data?.data?.stats);
 
       setBusStats(busResponse?.data?.data?.stats || {});
       setBookingStats(bookingResponse?.data?.data?.stats || {});
-    } catch (error) {
-      console.error('Error fetching stats:', error);
+    } catch (err) {
+      console.error('❌ Error fetching stats:', err);
+      setError('Failed to load dashboard statistics. Please try refreshing the page.');
     } finally {
       setLoading(false);
     }
@@ -128,6 +145,12 @@ const Dashboard = () => {
       <Typography variant="body1" color="text.secondary" paragraph>
         Welcome to AHC Tours Admin Panel
       </Typography>
+
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+          {error}
+        </Alert>
+      )}
 
       <Grid container spacing={3}>
         {/* Quick Actions */}

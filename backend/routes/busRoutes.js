@@ -9,7 +9,7 @@ const { isAdmin } = require('../middleware/roleMiddleware');
 // Admin-only specific routes (BEFORE /:id)
 router.get('/search', verifyToken, isAdmin, busController.searchBuses);
 router.get('/stats', verifyToken, isAdmin, busController.getBusStats);
-
+router.get('/stats/overview', verifyToken, isAdmin, busController.getStats);
 // Public routes
 router.get('/', busController.getAllBuses);
 
@@ -22,5 +22,6 @@ router.put('/:id/status', verifyToken, isAdmin, busController.updateBusStatus);
 router.get('/:id', busController.getBusById);
 router.put('/:id', verifyToken, isAdmin, busController.updateBus);
 router.delete('/:id', verifyToken, isAdmin, busController.deleteBus);
+
 
 module.exports = router;

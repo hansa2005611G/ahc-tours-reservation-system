@@ -15,5 +15,6 @@ router.put('/:id/cancel', verifyToken, bookingController.cancelBooking);
 
 // Admin only
 router.get('/stats/overview', verifyToken, isAdmin, bookingController.getBookingStatistics);
+router.get('/stats/overview', verifyToken, isAdmin, bookingController.getStats);
 
 module.exports = router;

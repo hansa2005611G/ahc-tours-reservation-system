@@ -1,5 +1,5 @@
 {
   "dependencies": {
-    "recharts": "^2.12.7"
+    "recharts": "^3.8.1"
   }
 }
