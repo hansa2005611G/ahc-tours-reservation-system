@@ -1,10 +1,15 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:5001/api';
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5001/api';
+
+const TIMEOUT_MS = 30000;
+const MAX_RETRIES = 3;
+const RETRY_DELAY_MS = 1000;
 
 // Create axios instance
 const api = axios.create({
   baseURL: API_BASE_URL,
+  timeout: TIMEOUT_MS,
   headers: {
     'Content-Type': 'application/json'
   }
@@ -34,9 +39,35 @@ api.interceptors.response.use(
       localStorage.removeItem('user');
       window.location.href = '/login';
     }
+    if (error.code === 'ECONNABORTED') {
+      error.userMessage = 'Request timed out. Please check your connection and try again.';
+    } else if (!error.response) {
+      error.userMessage = `Cannot reach the server at ${API_BASE_URL}. Please verify the backend is running.`;
+    } else {
+      error.userMessage = error.response?.data?.message || `Server error (${error.response.status})`;
+    }
+    console.error('[API Error]', error.config?.url, error.userMessage, error);
     return Promise.reject(error);
   }
 );
+
+// Retry a request with exponential backoff
+export const apiWithRetry = async (requestFn, retries = MAX_RETRIES) => {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      return await requestFn();
+    } catch (error) {
+      const isLastAttempt = attempt === retries;
+      const isRetryable = !error.response || error.code === 'ECONNABORTED';
+      if (isLastAttempt || !isRetryable) {
+        throw error;
+      }
+      const delay = RETRY_DELAY_MS * Math.pow(2, attempt - 1);
+      console.warn(`[API Retry] attempt ${attempt}/${retries} after ${delay}ms`);
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  }
+};
 
 // Auth APIs
 export const authAPI = {
